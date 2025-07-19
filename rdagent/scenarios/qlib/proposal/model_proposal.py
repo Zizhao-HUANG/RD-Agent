@@ -1,5 +1,6 @@
 import json
-from typing import List, Tuple
+import re
+from typing import List, Tuple, Set
 
 from rdagent.components.coder.model_coder.model import ModelExperiment, ModelTask
 from rdagent.components.proposal import ModelHypothesis2Experiment, ModelHypothesisGen
@@ -47,11 +48,103 @@ class QlibModelHypothesisGen(ModelHypothesisGen):
                     "No SOTA hypothesis and feedback available since previous experiments were not accepted."
                 )
 
+        # ==================== [START] DYNAMIC MODEL EXPLORATION LOGIC ====================
+        # 架构师注释：这是解决模型迭代瓶颈的核心逻辑。
+        # 它通过分析历史实验，动态生成给LLM的指令(RAG)，以在性能停滞时强制探索新模型架构。
+        # 该逻辑从 `quant_proposal.py` 中移植并适配，以确保系统行为的一致性。
+
+        # --- 1. 配置项 ---
+        # 定义系统支持的所有模型架构，这是探索的宇宙。
+        SUPPORTED_MODELS: Set[str] = {"ALSTM", "Transformer", "LSTM", "GRU", "TCN", "TabNet", "SFM", "GATs"}
+        # 定义“停滞”的阈值：连续多少次模型迭代失败后触发强制探索。
+        STAGNATION_THRESHOLD: int = 3
+
+        # --- 2. 从历史记录中进行状态分析 ---
+        consecutive_model_failures = 0
+        sota_found_in_history = False
+        tried_model_types: Set[str] = set()
+        sota_model_type = "N/A"
+
+        # 辅助函数：从实验假设的文本中，不区分大小写地提取模型类型关键字。
+        def find_model_type(text: str) -> str:
+            for model_name in SUPPORTED_MODELS:
+                # 使用正则表达式确保匹配到的是完整的单词，避免 "GRU" 匹配到 "GRU_Attention" 里的 "GRU"
+                if re.search(r'\b' + re.escape(model_name) + r'\b', text, re.IGNORECASE):
+                    return model_name
+            return None
+
+        # 反向遍历历史记录，以找到最后一个模型SOTA，并计算此后的连续失败次数。
+        # 注意：这里的 `exp.hypothesis` 来源于 `QlibQuantHypothesis`，它包含 `action` 属性。
+        for exp, feedback in reversed(trace.hist):
+            # 只关心模型相关的实验
+            if hasattr(exp.hypothesis, "action") and exp.hypothesis.action == "model":
+                model_type = find_model_type(exp.hypothesis.hypothesis)
+                if model_type:
+                    tried_model_types.add(model_type)
+
+                if feedback.decision is True:
+                    # 找到了最后一个模型SOTA。记录其类型，并停止计算连续失败次数。
+                    sota_found_in_history = True
+                    sota_model_type = model_type or "Unknown"
+                    break 
+                elif not sota_found_in_history:
+                    # 在找到SOTA之前，遇到的所有失败模型实验都计入连续失败。
+                    consecutive_model_failures += 1
+        
+        # --- 3. 动态生成RAG提示词 ---
+        is_stagnated = consecutive_model_failures >= STAGNATION_THRESHOLD
+
+        if is_stagnated:
+            # 状态：停滞。生成强指令，强制探索新架构。
+            available_models_str = ", ".join(sorted(list(SUPPORTED_MODELS)))
+            tried_models_str = ", ".join(sorted(list(tried_model_types))) if tried_model_types else "None"
+            untried_models = SUPPORTED_MODELS - tried_model_types
+            
+            if untried_models:
+                untried_models_str = ", ".join(sorted(list(untried_models)))
+                instruction = (
+                    f"Your primary task is to propose a model from the **UNTRIED** list: **[{untried_models_str}]**. "
+                    f"You MUST select one of these to break the deadlock."
+                )
+            else:
+                # 所有模型都已尝试过。改变策略，要求LLM重新评估与当前SOTA差异最大的模型。
+                instruction = (
+                    "All available model architectures have been attempted. Your task is to re-evaluate and propose a model that is "
+                    f"architecturally most different from the current {sota_model_type}-based SOTA. "
+                    "For example, consider Transformer, TabNet, or GATs again, but with a fundamentally new hypothesis about why it might work now (e.g., new factors, different hyperparameters)."
+                )
+
+            # 最终的RAG提示词，具有强烈的指令性。
+            qaunt_rag = f"""
+**CRITICAL DIRECTIVE: BREAK THE PERFORMANCE PLATEAU.**
+The system has failed to produce a new SOTA model for the last **{consecutive_model_failures}** consecutive model trials. The current strategy of refining the **{sota_model_type}** model is stuck in a local optimum.
+
+**Your mission is to propose a DIFFERENT model architecture to introduce new inductive biases.**
+
+- **Full List of Available Architectures:** [{available_models_str}]
+- **Historically Attempted Architectures:** [{tried_models_str}]
+
+{instruction}
+
+**DO NOT propose another {sota_model_type}-based model.** Your goal is exploration and novelty, not incremental refinement. Justify your choice by explaining why the new architecture is a promising alternative given the data and history.
+"""
+        else:
+            # 状态：未停滞。生成标准的优化提示词，允许在SOTA基础上进行微调或探索相似模型。
+            qaunt_rag = f"""
+1.  The current SOTA model is based on the **{sota_model_type}** architecture, which has proven effective. You can propose intelligent refinements to its hyperparameters (e.g., hidden size, dropout, learning rate) or minor architectural tweaks (e.g., adding a layer).
+2.  You may also consider proposing models with similar inductive biases if you have a strong reason. For example, if GRU is working, LSTM is a reasonable alternative to explore.
+3.  The training data consists of less than 1 million samples for the training set and approximately 250,000 samples for the validation set. Please design the hyperparameters accordingly and control the model size. This has a significant impact on the training results.
+4.  Focus on a balanced approach: either refine the proven winner or take a small, logical step to a related architecture.
+"""
+        # ===================== [END] DYNAMIC MODEL EXPLORATION LOGIC =====================
+
+
         context_dict = {
             "hypothesis_and_feedback": hypothesis_and_feedback,
             "last_hypothesis_and_feedback": last_hypothesis_and_feedback,
             "SOTA_hypothesis_and_feedback": sota_hypothesis_and_feedback,
-            "RAG": "1. In Quantitative Finance, market data could be time-series, and GRU model/LSTM model are suitable for them. Do not generate GNN model as for now.\n2. The training data consists of less than 1 million samples for the training set and approximately 250,000 samples for the validation set. Please design the hyperparameters accordingly and control the model size. This has a significant impact on the training results. If you believe that the previous model itself is good but the training hyperparameters or model hyperparameters are not optimal, you can return the same model and adjust these parameters instead.",
+            # 使用我们动态生成的RAG提示词替换掉原来的硬编码内容
+            "RAG": qaunt_rag,
             "hypothesis_output_format": T("scenarios.qlib.prompts:hypothesis_output_format").r(),
             "hypothesis_specification": T("scenarios.qlib.prompts:model_hypothesis_specification").r(),
         }
@@ -88,7 +181,10 @@ class QlibModelHypothesis2Experiment(ModelHypothesis2Experiment):
         else:
             specific_trace = Trace(trace.scen)
             for i in range(len(trace.hist) - 1, -1, -1):  # Reverse iteration
-                if not hasattr(trace.hist[i][0].hypothesis, "action") or trace.hist[i][0].hypothesis.action == "model":
+                # 架构师注释：确保这里的历史记录过滤逻辑与新假设生成逻辑兼容
+                is_model_action = hasattr(trace.hist[i][0].hypothesis, "action") and trace.hist[i][0].hypothesis.action == "model"
+                # 如果没有action属性，我们假设它是一个模型实验（因为这个类是模型专用的）
+                if not hasattr(trace.hist[i][0].hypothesis, "action") or is_model_action:
                     if last_experiment is None:
                         last_experiment = trace.hist[i][0]
                         last_feedback = trace.hist[i][1]

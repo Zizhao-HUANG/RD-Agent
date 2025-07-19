@@ -29,6 +29,9 @@ class QlibModelScenario(Scenario):
         self._rich_style_description = deepcopy(T(".prompts:qlib_model_rich_style_description").r())
         self._experiment_setting = deepcopy(T(".prompts:qlib_model_experiment_setting").r())
 
+    def get_runtime_environment(self) -> str:
+        return "python:3.10-slim, qlib"
+
     @property
     def background(self) -> str:
         return self._background

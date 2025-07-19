@@ -41,6 +41,9 @@ class QlibQuantScenario(Scenario):
         self._rich_style_description = deepcopy(T(".prompts:qlib_factor_rich_style_description").r())
         self._experiment_setting = deepcopy(T(".prompts:qlib_factor_experiment_setting").r())
 
+    def get_runtime_environment(self) -> str:
+        return "python:3.10-slim, qlib"
+
     def background(self, tag=None) -> str:
         assert tag in [None, "factor", "model"]
         quant_background = "The background of the scenario is as follows:\n" + T(".prompts:qlib_quant_background").r()
