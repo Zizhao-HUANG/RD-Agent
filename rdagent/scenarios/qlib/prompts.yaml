@@ -93,23 +93,35 @@ model_hypothesis_specification: |-
   8. Use standard libraries for baseline models, but also explore custom architecture designs to investigate novel structures. After sufficient trials with traditional models, aim for innovation comparable to top-tier AI conferences (NeurIPS, ICLR, ICML, SIGKDD, etc.) in time series modeling.
 
 factor_hypothesis_specification: |-
-  1. **1-5 Factors per Generation:**
-    - Ensure each generation produces 1-5 factors.
-    - Balance simplicity and complexity to build a robust factor library.
-    - Make full use of the financial data provided to you instead of focusing solely on a specific field.
-  2. **Simple and Effective Factors First:**
-    - Start with factors that are simple, easy to achieve and likely effective.
-    - Concisely explain why these factors are expected to work.
-    - Avoid complex or combined factors initially.
-  3. **Gradual Complexity Increase:**
-    - Introduce more complex factors (e.g. machine learning based factors, factors use mult-dimentional factor raw data, etc.) as more experimental results are gathered.
-    - Combine factors only after simpler ones are tested and validated.
-  4. **New Directions and Optimizations:**
-    - If multiple consecutive iterations fail to produce factors surpassing SOTA, consider switching to a new direction and can starting with simple factors again.
-    - If optimizing a specific type of factor, proceed from simple to complex.
-  5. Note
-    - Highlight that factors surpassing SOTA are included in the library to avoid re-implementation.
-    - No matter how many factors you plan to generate, only reply with one set of hypothesis and reason. The hypothesis can include the proposal of multiple factors at the same time.
+  1. **Core Objective: Design for Deep Learning Models**
+    - Your primary goal is to generate sophisticated and information-rich factors specifically tailored for advanced deep learning models like Transformers, ALSTM, TCN, and GATs.
+    - Move beyond simple linear factors. The objective is to capture complex, non-linear, temporal, and cross-sectional patterns that these models are designed to exploit.
+
+  2. **Factor Design Principles: Focus on Feature Richness**
+    - **a. Advanced Time-Series Features:** Generate factors that capture the dynamics of time-series data.
+      - Instead of simple moving averages, propose factors based on:
+        - **Volatility Dynamics:** GARCH-like features, such as the ratio of short-term to long-term volatility (e.g., `Stddev(Log(Return($close, 1)), 20) / Stddev(Log(Return($close, 1)), 60))`).
+        - **Trend Persistence & Mean Reversion:** Features inspired by concepts like the Hurst exponent or auto-correlation decay.
+        - **Informational Content:** Factors derived from information theory, like the entropy of price changes over a window.
+    - **b. Cross-Sectional & Relational Features:** These are critical for graph-based models (GATs) and for understanding relative value.
+      - Propose factors that measure a stock's characteristic relative to its peers (e.g., within the same industry or market cap quintile).
+      - Examples: `Rank(ROC($close, 20))`, `(ROC($close, 20) - Mean(ROC($close, 20))) / Stddev(ROC($close, 20))` where `Mean` and `Stddev` are calculated cross-sectionally within an industry.
+    - **c. Non-Linear Transformations & Factor Interactions:** Deep learning models excel at learning non-linearities, but providing them with good initial features is key.
+      - **Interactions:** Explicitly combine factors from different families (e.g., `Momentum * Volatility` or `Value / Volatility`). An example could be `ROC($close, 20) * Ref(Stddev($close, 20), -1)`.
+      - **Transformations:** Apply non-linear functions (`Log`, `Sqrt`, `Power(x, 2)`) to existing factors to change their distribution or emphasize certain regimes.
+    - **d. Market Regime-Adaptive Factors:** Design factors that dynamically adjust to the prevailing market environment.
+      - The parameters of a factor (e.g., lookback window) could be conditional on a market state indicator (e.g., a market volatility index like VIX, if available, or a proxy like `Stddev(MarketIndex, 60)`).
+      - Example Hypothesis: "A momentum factor's lookback period should be shorter in high-volatility regimes and longer in low-volatility regimes."
+
+  3. **Strategic Guidelines & Constraints**
+    - **Generation Quota:** Each response should propose a set of 1-5 distinct, yet potentially related, factor hypotheses.
+    - **Implementation Feasibility:** All proposed factors MUST be expressible using `qlib`'s operators. This is a non-negotiable constraint.
+    - **Iterative Strategy:**
+      - Start by exploring a sophisticated hypothesis from one of the categories above.
+      - If a direction consistently fails to generate alpha, pivot to another complex category.
+      - If a factor shows promise, focus subsequent iterations on refining and enhancing it (e.g., by adjusting parameters or combining it with other features) before switching to a completely new idea.
+    - **SOTA Library Awareness:** Factors that have already surpassed the SOTA baseline are automatically included in the factor library. Do not re-propose them. Your task is to discover novel alpha sources.
+    - **Response Format:** Reply with a single, coherent response containing the set of hypotheses and their underlying rationale.
 
 factor_experiment_output_format: |-
   The output should follow JSON format. The schema is as follows:
