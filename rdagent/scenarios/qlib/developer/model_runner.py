@@ -74,15 +74,23 @@ class QlibModelRunner(CachedRunner[QlibModelExperiment]):
 
         logger.info(f"start to run {exp.sub_tasks[0].name} model")
         if exp.sub_tasks[0].model_type == "TimeSeries":
+            model_hyperparameters = exp.sub_tasks[0].hyperparameters or {}
+            num_timesteps = int(model_hyperparameters.get("num_timesteps", 120))
+
+            env_to_use.update(
+                {
+                    "dataset_cls": "TSDatasetH",
+                    "step_len": str(num_timesteps),
+                    "num_timesteps": str(num_timesteps),
+                }
+            )
+
             if exist_sota_factor_exp:
-                env_to_use.update(
-                    {"dataset_cls": "TSDatasetH", "num_features": num_features, "step_len": 20, "num_timesteps": 20}
-                )
+                env_to_use.update({"num_features": num_features})
                 result, stdout = exp.experiment_workspace.execute(
                     qlib_config_name="conf_sota_factors_model.yaml", run_env=env_to_use
                 )
             else:
-                env_to_use.update({"dataset_cls": "TSDatasetH", "step_len": 20, "num_timesteps": 20})
                 result, stdout = exp.experiment_workspace.execute(
                     qlib_config_name="conf_baseline_factors_model.yaml", run_env=env_to_use
                 )
