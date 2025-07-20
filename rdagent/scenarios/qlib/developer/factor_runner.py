@@ -111,8 +111,21 @@ class QlibFactorRunner(CachedRunner[QlibFactorExperiment]):
             # Sort and nest the combined factors under 'feature'
             combined_factors = combined_factors.sort_index()
             combined_factors = combined_factors.loc[:, ~combined_factors.columns.duplicated(keep="last")]
-            new_columns = pd.MultiIndex.from_product([["feature"], combined_factors.columns])
+            
+            # Standardize column index to be robust against pre-existing MultiIndex
+            if isinstance(combined_factors.columns, pd.MultiIndex):
+                # If it's already a MultiIndex, flatten it to a single level.
+                # e.g., ('feature', 'ROC20') becomes 'feature_ROC20'
+                logger.info("Detected existing MultiIndex on SOTA factors. Flattening for standardization.")
+                flat_columns = ["_".join(map(str, col)).strip() for col in combined_factors.columns.values]
+            else:
+                # If it's a regular index, use it as is.
+                flat_columns = combined_factors.columns
+
+            # Now, reliably create a 2-level MultiIndex from the standardized flat columns.
+            new_columns = pd.MultiIndex.from_product([["feature"], flat_columns])
             combined_factors.columns = new_columns
+            logger.info(f"Successfully created standardized 2-level MultiIndex for {len(new_columns)} factors.")
             num_features = RD_AGENT_SETTINGS.initial_fator_library_size + len(combined_factors.columns)
             logger.info(f"Factor data processing completed.")
 
