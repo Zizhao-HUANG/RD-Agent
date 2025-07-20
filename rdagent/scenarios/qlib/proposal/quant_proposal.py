@@ -135,8 +135,18 @@ Your proposals must be novel and challenge conventional factor design. Do not re
             # Its goal is to break out of local optima by forcing exploration of new architectures when stuck.
 
             # --- Configuration ---
-            # A set of all supported model architectures. This is the universe of possibilities.
-            SUPPORTED_MODELS: Set[str] = {"ALSTM", "Transformer", "LSTM", "GRU", "TCN", "TabNet", "SFM", "GATs"}
+            # [MODIFIED] A comprehensive set of all supported model architectures.
+            SUPPORTED_MODELS: Set[str] = {
+                # PyTorch Time-Series
+                "ALSTM", "LSTM", "GRU", "TCN", "Transformer", "LocalFormer",
+                "ALSTM-TS", "LSTM-TS", "GRU-TS", "TCN-TS", "Transformer-TS", "LocalFormer-TS", "TCTS",
+                # PyTorch Tabular
+                "TabNet", "SFM", "Sandwich", "Hist", "IGMTF", "KRNN", "TRA",
+                # PyTorch Graph
+                "GATs", "GATs-TS",
+                # Traditional ML
+                "LightGBM", "XGBoost", "CatBoost", "GBDT", "Linear"
+            }
             # The number of consecutive failed model trials that triggers the "stagnation" state.
             STAGNATION_THRESHOLD: int = 3
 
@@ -148,7 +158,8 @@ Your proposals must be novel and challenge conventional factor design. Do not re
 
             # Helper to find a model keyword in text, case-insensitively.
             def find_model_type(text: str) -> str:
-                for model_name in SUPPORTED_MODELS:
+                # Prioritize longer names to avoid matching "GRU" in "GRU-TS" incorrectly
+                for model_name in sorted(list(SUPPORTED_MODELS), key=len, reverse=True):
                     if re.search(r'\b' + re.escape(model_name) + r'\b', text, re.IGNORECASE):
                         return model_name
                 return None
@@ -173,37 +184,38 @@ Your proposals must be novel and challenge conventional factor design. Do not re
             is_stagnated = consecutive_model_failures >= STAGNATION_THRESHOLD
 
             if is_stagnated:
-                # STATE: STAGNATED. Force exploration of new architectures.
+                # [MODIFIED] STATE: STAGNATED. Provide expert guidance and strong recommendations.
                 available_models_str = ", ".join(sorted(list(SUPPORTED_MODELS)))
                 tried_models_str = ", ".join(sorted(list(tried_model_types))) if tried_model_types else "None"
-                untried_models = SUPPORTED_MODELS - tried_model_types
                 
-                if untried_models:
-                    untried_models_str = ", ".join(sorted(list(untried_models)))
-                    instruction = (
-                        f"Your primary task is to propose a model from the **UNTRIED** list: **[{untried_models_str}]**. "
-                        f"You MUST select one of these to break the deadlock."
-                    )
-                else:
-                    # All models have been tried. Shift strategy to re-evaluating the most different or promising ones.
-                    instruction = (
-                        "All available model architectures have been attempted. Your task is to re-evaluate and propose a model that is "
-                        f"architecturally most different from the current {sota_model_type}-based SOTA. "
-                        "For example, consider Transformer, TabNet, or GATs again, but with a fundamentally new hypothesis about why it might work now (e.g., new factors, different hyperparameters)."
-                    )
-
                 qaunt_rag = f"""
 **CRITICAL DIRECTIVE: BREAK THE PERFORMANCE PLATEAU.**
 The system has failed to produce a new SOTA model for the last **{consecutive_model_failures}** consecutive model trials. The current strategy of refining the **{sota_model_type}** model is stuck in a local optimum.
 
-**Your mission is to propose a DIFFERENT model architecture to introduce new inductive biases.**
+**Expert Analysis & Top Recommendation:**
+Based on a first-principles analysis of our model suite and hardware capabilities, the **`Transformer-TS`** model is identified as having the highest theoretical potential to break this deadlock. Its self-attention mechanism is uniquely suited to capture the complex, long-range, non-linear dependencies in financial time-series data.
+
+**Hardware-Optimized Hyperparameter Suggestion (for RTX 4090 24GB):**
+To fully leverage our hardware, you should propose a significantly larger `Transformer-TS` model. Here is a recommended starting configuration to maximize performance:
+
+# Example for your hypothesis generation
+model_class: "Transformer-TS"
+d_model: 256           # Model width
+num_layers: 8          # Model depth
+nhead: 8               # Attention heads
+dim_feedforward: 1024  # FFN size (4 * d_model)
+num_timesteps: 60      # Crucial: ~1 quarter of historical data
+dropout: 0.2
+lr: 0.0001
+batch_size: 512
+
+**Your Task:**
+Your primary task is to propose a new model to introduce novel inductive biases. While **`Transformer-TS` with the above configuration is the RECOMMENDED path**, you are empowered to select ANY model from the full list below if you have a compelling alternative hypothesis.
 
 - **Full List of Available Architectures:** [{available_models_str}]
 - **Historically Attempted Architectures:** [{tried_models_str}]
 
-{instruction}
-
-**DO NOT propose another {sota_model_type}-based model.** Your goal is exploration and novelty, not incremental refinement. Justify your choice by explaining why the new architecture is a promising alternative given the data and history.
+Justify your choice by explaining why the new architecture is a promising alternative. If you choose `Transformer-TS`, you can use the recommended parameters as a baseline for your proposal.
 """
             else:
                 # STATE: NOT STAGNATED. Standard refinement and adjacent exploration.
