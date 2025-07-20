@@ -45,6 +45,32 @@ class GeneralModelScenario(Scenario):
 {self.background}
 The interface you should follow to write the runnable code:
 {self.interface}
+
+------Crucial Output Format Constraints------
+You MUST respond with a single, valid JSON object. 
+Crucially, all values in this JSON object MUST be strings. Do not use nested JSON objects or arrays as values. If a value contains complex information, format it as a multi-line string.
+
+**GOOD Example (Correct Format):**
+{{
+  "model_name": "GeneralTransformer",
+  "model_description": "This is a general transformer model for various tasks.",
+  "model_formulation": "y = Transformer(x)",
+  "model_variables": "{{\\n  \\"x\\": \\"Input tensor.\\",\\n  \\"y\\": \\"Output tensor.\\",\\n  \\"d_model\\": \\"512\\",\\n  \\"num_layers\\": \\"6\\"\\n}}"
+}}
+
+**BAD Example (Incorrect Format - DO NOT USE):**
+{{
+  "model_name": "GeneralTransformer",
+  "model_description": "This is a general transformer model...",
+  "model_formulation": "y = Transformer(x)",
+  "model_variables": {{  // <-- INCORRECT! This is a nested object, not a string.
+    "x": "Input tensor...",
+    "y": "Output tensor...",
+    "d_model": 512, // <-- INCORRECT! This is a number, not a string.
+    "num_layers": 6
+  }}
+}}
+
 The output of your code should be in the format:
 {self.output_format}
 The simulator user can use to test your model:
