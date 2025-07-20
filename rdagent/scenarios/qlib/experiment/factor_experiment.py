@@ -75,6 +75,32 @@ The source data you can use:
 {self.get_source_data_desc(task)}
 The interface you should follow to write the runnable code:
 {self.interface}
+
+------Crucial Output Format Constraints------
+You MUST respond with a single, valid JSON object. 
+Crucially, all values in this JSON object MUST be strings. Do not use nested JSON objects or arrays as values. If a value contains complex information, format it as a multi-line string.
+
+**GOOD Example (Correct Format):**
+{{
+  "factor_name": "VolatilityRegimeIndicator_20_60",
+  "factor_description": "This factor aims to identify volatility regimes by comparing short-term volatility with long-term volatility.",
+  "factor_formulation": "(Short-term Volatility / Long-term Volatility) - 1",
+  "factor_variables": "{{\\n  \\"close\\": \\"The daily closing price of the instrument.\\",\\n  \\"daily_return\\": \\"The daily percentage change in the closing price, calculated as (close_t / close_{{t-1}}) - 1.\\",\\n  \\"short_term_window\\": \\"20 days\\",\\n  \\"long_term_window\\": \\"60 days\\"\\n}}"
+}}
+
+**BAD Example (Incorrect Format - DO NOT USE):**
+{{
+  "factor_name": "VolatilityRegimeIndicator_20_60",
+  "factor_description": "This factor aims to identify volatility regimes...",
+  "factor_formulation": "(Short-term Volatility / Long-term Volatility) - 1",
+  "factor_variables": {{  // <-- INCORRECT! This is a nested object, not a string.
+    "close": "The daily closing price...",
+    "daily_return": "The daily percentage change...",
+    "short_term_window": 20, // <-- INCORRECT! This is a number, not a string.
+    "long_term_window": 60
+  }}
+}}
+
 The output of your code should be in the format:
 {self.output_format}
 The simulator user can use to test your factor:
