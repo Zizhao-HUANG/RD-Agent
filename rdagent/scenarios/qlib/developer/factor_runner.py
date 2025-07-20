@@ -163,8 +163,15 @@ class QlibFactorRunner(CachedRunner[QlibFactorExperiment]):
                     )
                 sota_model_type = sota_model_exp.sub_tasks[0].model_type
                 if sota_model_type == "TimeSeries":
+                    sota_model_hyperparameters = sota_model_exp.sub_tasks[0].hyperparameters or {}
+                    sota_num_timesteps = int(sota_model_hyperparameters.get("num_timesteps", 120))
                     env_to_use.update(
-                        {"dataset_cls": "TSDatasetH", "num_features": num_features, "step_len": 20, "num_timesteps": 20}
+                        {
+                            "dataset_cls": "TSDatasetH", 
+                            "num_features": num_features, 
+                            "step_len": str(sota_num_timesteps), 
+                            "num_timesteps": str(sota_num_timesteps)
+                        }
                     )
                 elif sota_model_type == "Tabular":
                     env_to_use.update({"dataset_cls": "DatasetH", "num_features": num_features})
