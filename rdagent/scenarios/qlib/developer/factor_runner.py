@@ -14,6 +14,7 @@ from rdagent.log import rdagent_logger as logger
 from rdagent.scenarios.qlib.developer.utils import process_factor_data
 from rdagent.scenarios.qlib.experiment.factor_experiment import QlibFactorExperiment
 from rdagent.scenarios.qlib.experiment.model_experiment import QlibModelExperiment
+import json
 
 DIRNAME = Path(__file__).absolute().resolve().parent
 DIRNAME_local = Path.cwd()
@@ -165,6 +166,9 @@ class QlibFactorRunner(CachedRunner[QlibFactorExperiment]):
                 )
                 env_to_use = {"PYTHONPATH": "./"}
                 sota_training_hyperparameters = sota_model_exp.sub_tasks[0].training_hyperparameters
+                # 检查类型并反序列化
+                if isinstance(sota_training_hyperparameters, str):
+                    sota_training_hyperparameters = json.loads(sota_training_hyperparameters)
                 if sota_training_hyperparameters:
                     env_to_use.update(
                         {
