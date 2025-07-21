@@ -2,6 +2,7 @@ import pandas as pd
 import yaml
 from jinja2 import Environment, StrictUndefined
 from pathlib import Path
+import json
 
 from rdagent.components.runner import CachedRunner
 from rdagent.core.conf import RD_AGENT_SETTINGS
@@ -98,6 +99,9 @@ class QlibModelRunner(CachedRunner[QlibModelExperiment]):
         env_to_use = {"PYTHONPATH": "./"}
 
         training_hyperparameters = exp.sub_tasks[0].training_hyperparameters
+        # Check if training_hyperparameters is a string, if so, parse it from JSON
+        if isinstance(training_hyperparameters, str):
+            training_hyperparameters = json.loads(training_hyperparameters)
         if training_hyperparameters:
             env_to_use.update(
                 {
