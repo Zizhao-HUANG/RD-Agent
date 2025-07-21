@@ -58,7 +58,21 @@ class QlibFactorRunner(CachedRunner[QlibFactorExperiment]):
         # if the IC is larger than a threshold, remove the new_feature column
         # return the new_feature
 
-        concat_feature = pd.concat([SOTA_feature, new_feature], axis=1)
+        # Standardize column indices before concatenation to handle mixed index levels
+        standardized_dfs = []
+        for df, name in [(SOTA_feature, "SOTA_feature"), (new_feature, "new_feature")]:
+            if isinstance(df.columns, pd.MultiIndex):
+                # If it's already a MultiIndex, flatten it to a single level
+                logger.info(f"Standardizing MultiIndex columns in {name} for deduplication")
+                flat_columns = ["_".join(map(str, col)).strip() for col in df.columns.values]
+                df_standardized = df.copy()
+                df_standardized.columns = flat_columns
+                standardized_dfs.append(df_standardized)
+            else:
+                # If it's a regular index, use it as is
+                standardized_dfs.append(df)
+        
+        concat_feature = pd.concat(standardized_dfs, axis=1)
         IC_max = (
             concat_feature.groupby("datetime")
             .parallel_apply(
@@ -161,17 +175,14 @@ class QlibFactorRunner(CachedRunner[QlibFactorExperiment]):
                             "weight_decay": str(sota_training_hyperparameters.get("weight_decay", 0.0)),
                         }
                     )
+                    # Dynamically get num_timesteps from training hyperparameters
+                    if "num_timesteps" in sota_training_hyperparameters:
+                        env_to_use["num_timesteps"] = str(sota_training_hyperparameters["num_timesteps"])
+                        logger.info(f"FactorRunner dynamically updated env_to_use with num_timesteps: {sota_training_hyperparameters['num_timesteps']}")
                 sota_model_type = sota_model_exp.sub_tasks[0].model_type
                 if sota_model_type == "TimeSeries":
-                    sota_model_hyperparameters = sota_model_exp.sub_tasks[0].hyperparameters or {}
-                    sota_num_timesteps = int(sota_model_hyperparameters.get("num_timesteps", 120))
                     env_to_use.update(
-                        {
-                            "dataset_cls": "TSDatasetH", 
-                            "num_features": num_features, 
-                            "step_len": str(sota_num_timesteps), 
-                            "num_timesteps": str(sota_num_timesteps)
-                        }
+                        {"dataset_cls": "TSDatasetH", "num_features": num_features, "step_len": 20}
                     )
                 elif sota_model_type == "Tabular":
                     env_to_use.update({"dataset_cls": "DatasetH", "num_features": num_features})
