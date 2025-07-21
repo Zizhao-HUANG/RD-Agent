@@ -78,9 +78,10 @@ hypothesis_output_format_with_action: |-
   Please generate the output using the following format and specifications. You MUST strictly adhere to the JSON schema provided.
   {
   "action": "If `hypothesis_specification` provides the action you need to take, please follow 'hypothesis_specification' to choose the action. Otherwise, based on previous experimental results, suggest the action you believe is most appropriate at the moment. It MUST be one of [`factor`, `model`].",
-  "hypothesis": "A detailed proposal for the new idea. **This value MUST be a single string.** If you are proposing multiple items (e.g., two new factors), describe each one clearly within this single string. You can use bullet points (e.g., '- Factor 1: [description].\\n- Factor 2: [description].') for better readability. **DO NOT output a list, an object, or code here.** Please do not include mathematical formulas here.",
-  "reason": "Provide a detailed, multi-sentence justification. Your reason should first connect the hypothesis to the limitations or findings of previous experiments. Then, explain the underlying logic or mechanism of why the proposed hypothesis is expected to work. Finally, state the specific improvement you anticipate (e.g., improved accuracy in volatile markets, better ranking performance)."
+  "hypothesis": "A detailed proposal for the new idea. **This value MUST be a single string.** Your role is to act as the **Synthesis Unit**, creating a **high-level conceptual blueprint**. A separate agent will ask for implementation details like code or mathematical formulas in a later step. Your job at this stage is to describe the *'what'* and the *'why'*, not the *'how'*. \n\n- **When proposing a `factor`:** Your blueprint must be a pure description. It should describe the factor's name and the economic or market intuition it aims to capture. For example: 'A factor that measures market sentiment by analyzing the ratio of advancing stocks to declining stocks.' Do not provide the calculation formula.\n\n- **When proposing a `model`:** Your blueprint must be a structured, natural language description of the model's name, type, architecture, and key conceptual hyperparameters. For example: 'A deep Transformer model with 12 layers and a high dropout rate of 0.4 to capture long-term dependencies.'\n\n**CRITICAL RULE FOR BOTH:** You **MUST NOT** output any implementation details. This includes Python code, YAML configurations, and specific mathematical formulas. Your entire output for this field must be descriptive natural language.",
+  "reason": "Provide a detailed, multi-sentence justification. Your reason should first connect the hypothesis to the limitations or findings of previous experiments. Then, explain the underlying logic or mechanism of why the proposed hypothesis is expected to work. Finally, state the specific improvement you anticipate (e.g., improved accuracy, better ranking performance, or a more robust factor)."
   }
+
   
 model_hypothesis_specification: |-
   **CRITICAL DIRECTIVE: BREAK THE PERFORMANCE PLATEAU & LEVERAGE OUR HARDWARE.**
@@ -91,21 +92,13 @@ model_hypothesis_specification: |-
 
   **2. Top-Tier Pragmatic Recommendations:**
   If a full ST-GT is too complex for one step, prioritize one of these powerful architectures:
-  - **`Transformer-TS`**: **(Strongly Recommended)** Best for capturing complex, long-range temporal dependencies within a single instrument's history. Its self-attention mechanism is ideal for the low signal-to-noise ratio of financial data.
+  - **`Transformer-TS`**: Best for capturing complex, long-range temporal dependencies within a single instrument's history. Its self-attention mechanism is ideal for the low signal-to-noise ratio of financial data.
   - **`GATs-TS`**: Best for modeling inter-stock relationships. Propose this if you believe alpha comes from sector dynamics, pair trading signals, or lead-lag effects. Requires a meaningful graph structure.
   - **`TCN-TS`**: A robust and computationally efficient alternative to RNNs and Transformers, excellent for capturing patterns over a fixed-length lookback window.
 
   **3. Hardware-Optimized Hyperparameter Baseline (Example for a Long-Sequence Transformer):**
   When proposing a model, especially a large one like Transformer, use aggressive parameters that match our RTX 4090. Do not be conservative. This example is optimized for a **long sequence length (e.g., 240 days)** to capture annual patterns.
   ```yaml
-
-  **Mission Objective:**
-  Train a state-of-the-art Transformer model for financial time series prediction. The primary goal is to maximize the model's ability to learn from long-term historical patterns (~1 year) while remaining robust against overfitting and fully utilizing the available GPU VRAM.
-
-  **Core Philosophy: "Deep Memory, Strong Regularization"**
-  The strategy is based on the hypothesis that significant predictive signals in finance are long-term and subtle. Therefore, we prioritize model depth and historical context over all else, and we use aggressive regularization to extract these signals from noise.
-
-  ---
 
   ### Strategic Parameter Guidelines:
 
@@ -142,7 +135,7 @@ model_hypothesis_specification: |-
   *   **`batch_size` (The VRAM Throttle)**
     *   **Principle:** This is the primary lever for managing hardware resources. A larger batch size improves training speed and gradient stability.
     *   **Objective:** **Maximize this value to achieve ~90% VRAM utilization.**
-    *   **Dynamic Logic:** Start with a high value like 1024. If an Out-Of-Memory (OOM) error occurs, reduce it in steps (e.g., to 768, then 512). If VRAM usage is consistently low, increase it.
+    *   **Dynamic Logic:** Start with a high value like 512. If an Out-Of-Memory (OOM) error occurs, reduce it in steps (e.g., to 256, then 128). If VRAM usage is consistently low, increase it.
   ```
 
   **4. Full Spectrum of Available Models:**
@@ -156,35 +149,47 @@ model_hypothesis_specification: |-
   Analyze the history. Propose a new model architecture. Justify why its inductive bias is what we need now. If you choose a large model, propose aggressive, hardware-aware hyperparameters.
 
 factor_hypothesis_specification: |-
-  1. **Core Objective: Design for Deep Learning Models**
-    - Your primary goal is to generate sophisticated and information-rich factors specifically tailored for advanced deep learning models like Transformers, ALSTM, TCN, and GATs.
-    - Move beyond simple linear factors. The objective is to capture complex, non-linear, temporal, and cross-sectional patterns that these models are designed to exploit.
+  **You are the "Synthesis Unit" of the RD-Agent(Q) framework, acting as our Chief Scientist and Idea Generator.** Your mission is to analyze the history of experimental trials and generate conceptually innovative factor hypotheses. Your goal is to break new ground, moving beyond incremental tweaks and discovering novel sources of alpha.
 
-  2. **Factor Design Principles: Focus on Feature Richness**
-    - **a. Advanced Time-Series Features:** Generate factors that capture the dynamics of time-series data.
-      - Instead of simple moving averages, propose factors based on:
-        - **Volatility Dynamics:** GARCH-like features, such as the ratio of short-term to long-term volatility (e.g., `Stddev(Log(Return($close, 1)), 20) / Stddev(Log(Return($close, 1)), 60))`).
-        - **Trend Persistence & Mean Reversion:** Features inspired by concepts like the Hurst exponent or auto-correlation decay.
-        - **Informational Content:** Factors derived from information theory, like the entropy of price changes over a window.
-    - **b. Cross-Sectional & Relational Features:** These are critical for graph-based models (GATs) and for understanding relative value.
-      - Propose factors that measure a stock's characteristic relative to its peers (e.g., within the same industry or market cap quintile).
-      - Examples: `Rank(ROC($close, 20))`, `(ROC($close, 20) - Mean(ROC($close, 20))) / Stddev(ROC($close, 20))` where `Mean` and `Stddev` are calculated cross-sectionally within an industry.
-    - **c. Non-Linear Transformations & Factor Interactions:** Deep learning models excel at learning non-linearities, but providing them with good initial features is key.
-      - **Interactions:** Explicitly combine factors from different families (e.g., `Momentum * Volatility` or `Value / Volatility`). An example could be `ROC($close, 20) * Ref(Stddev($close, 20), -1)`.
-      - **Transformations:** Apply non-linear functions (`Log`, `Sqrt`, `Power(x, 2)`) to existing factors to change their distribution or emphasize certain regimes.
-    - **d. Market Regime-Adaptive Factors:** Design factors that dynamically adjust to the prevailing market environment.
-      - The parameters of a factor (e.g., lookback window) could be conditional on a market state indicator (e.g., a market volatility index like VIX, if available, or a proxy like `Stddev(MarketIndex, 60)`).
-      - Example Hypothesis: "A momentum factor's lookback period should be shorter in high-volatility regimes and longer in low-volatility regimes."
+  **1. An Inspirational Library of Alpha Concepts**
+  To spark your creativity, here is a comprehensive library of established conceptual categories. These categories represent different market phenomena and investment philosophies. Think about the *idea* behind each category, not just a specific formula.  Use these as a starting point, a source of inspiration, or a foundation to build upon.
 
-  3. **Strategic Guidelines & Constraints**
-    - **Generation Quota:** Each response should propose a set of 1-5 distinct, yet potentially related, factor hypotheses.
-    - **Implementation Feasibility:** All proposed factors MUST be expressible using `qlib`'s operators. This is a non-negotiable constraint.
-    - **Iterative Strategy:**
-      - Start by exploring a sophisticated hypothesis from one of the categories above.
-      - If a direction consistently fails to generate alpha, pivot to another complex category.
-      - If a factor shows promise, focus subsequent iterations on refining and enhancing it (e.g., by adjusting parameters or combining it with other features) before switching to a completely new idea.
-    - **SOTA Library Awareness:** Factors that have already surpassed the SOTA baseline are automatically included in the factor library. Do not re-propose them. Your task is to discover novel alpha sources.
-    - **Response Format:** Reply with a single, coherent response containing the set of hypotheses and their underlying rationale.
+  *   Category 1: Momentum and Reversal
+  *   Category 2: Volatility and Risk
+  *   Category 3: Price-Volume Interaction
+  *   Category 4: Intraday Price Patterns
+  *   Category 5: Higher-Order Derivatives and Transformations
+  *   Category 6: Cross-Sectional Relative Value
+  *   Category 7: Liquidity and Market Impact
+  *   Category 8: Return Distribution Skewness & Kurtosis
+  *   Category 9: Regime-Dependent / Conditional Factors
+  *   Category 10: Proxy for Fundamental Quality
+  *   Category 11: Proxy for Information Asymmetry & Informed Trading
+  *   Category 12: Proxy for Investor Sentiment & Behavior
+  *   Category 13: Proxy for Corporate Actions & Special Events
+  *   Category 14: Proxy for Investment Style Profile
+  *   Category 15: Proxy for Systemic Risk Contribution & Connectivity
+
+  You are encouraged to **combine ideas from different categories** (e.g., "a Momentum factor that only activates in a low-volatility regime"). 
+
+  **Crucially, this list is not exhaustive. You are empowered to invent novel factor categories** if you can articulate a compelling economic, behavioral, or market-structure rationale. Your most valuable contributions will come from ideas that transcend this established framework.
+
+  **2. CRITICAL DIRECTIVE: Avoid the Formula Fixation Trap**
+  The previous version of this prompt provided many specific formula examples. **This was a mistake.** It led to a pattern of imitation, limiting creativity and producing factors that were too similar to the examples.
+
+  **Your new directive is to transcend this.** Think about the **economic or behavioral rationale FIRST**.
+  *   **WRONG WAY (Old):** "Let me try to combine `ROC($close, 20)` with `Stddev($close, 20)`."
+  *   **RIGHT WAY (New):** "My hypothesis is that strong momentum trends are more reliable when they are not accompanied by a spike in volatility. This suggests a 'calm trend' factor. I can capture this by creating a momentum factor and penalizing it by its recent volatility."
+
+  The specific `qlib` implementation is a secondary step for the Implementation Unit. Your job is to provide the core, innovative idea.
+
+  **3. Operational Constraints & Guidelines**
+  *   **Implementation Feasibility:** While you focus on the concept, it must be grounded in what is possible. All proposed factor concepts MUST be translatable into `qlib`'s operator language using the available data: `$open`, `$high`, `$low`, `$close`, `$volume`, and `$factor`.
+  *   **SOTA Awareness:** The SOTA (State-of-the-Art) factor library is automatically updated with successful factors from previous trials. **Do not re-propose factors that have already succeeded.** Your goal is to find *new* sources of alpha that can improve upon the current SOTA.
+  *   **Iterative Strategy:** Analyze the feedback from previous trials. If a conceptual direction (e.g., Volatility) is showing promise, propose refinements or variations. If a direction is consistently failing, pivot to a different, unexplored category from your toolkit or invent a new one.
+  *   **Generation Quota:** Propose 1-3 distinct, well-reasoned factor hypotheses in each response. Focus on quality and novelty over quantity.
+
+  Now, based on the provided history and feedback, generate your next set of hypotheses.
 
 factor_experiment_output_format: |-
   The output should follow JSON format. The schema is as follows:
@@ -230,7 +235,7 @@ model_experiment_output_format: |-
             "n_epochs": "100",
             "lr": "5e-5",
             "early_stop": 10, # highly recommended to set it to **10** for a more stable training
-            "batch_size": 1024,
+            "batch_size": 512,
             "weight_decay": 0.01
         },
         "model_type": "Tabular or TimeSeries"  # Should be one of "Tabular" or "TimeSeries"
