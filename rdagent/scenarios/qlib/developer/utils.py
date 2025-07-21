@@ -60,7 +60,22 @@ def process_factor_data(exp_or_list: List[QlibFactorExperiment] | QlibFactorExpe
 
     # Combine all successful factor data
     if factor_dfs:
-        return pd.concat(factor_dfs, axis=1)
+        # Standardize column indices before concatenation to handle mixed index levels
+        standardized_dfs = []
+        for i, df in enumerate(factor_dfs):
+            if isinstance(df.columns, pd.MultiIndex):
+                # If it's already a MultiIndex, flatten it to a single level
+                logger.info(f"Standardizing MultiIndex columns in factor DataFrame {i+1}")
+                flat_columns = ["_".join(map(str, col)).strip() for col in df.columns.values]
+                df_standardized = df.copy()
+                df_standardized.columns = flat_columns
+                standardized_dfs.append(df_standardized)
+            else:
+                # If it's a regular index, use it as is
+                standardized_dfs.append(df)
+        
+        logger.info(f"Concatenating {len(standardized_dfs)} standardized factor DataFrames")
+        return pd.concat(standardized_dfs, axis=1)
     else:
         raise FactorEmptyError(
             f"No valid factor data found to merge (in process_factor_data) because of {error_message}."

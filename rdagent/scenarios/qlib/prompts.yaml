@@ -98,17 +98,51 @@ model_hypothesis_specification: |-
   **3. Hardware-Optimized Hyperparameter Baseline (Example for a Long-Sequence Transformer):**
   When proposing a model, especially a large one like Transformer, use aggressive parameters that match our RTX 4090. Do not be conservative. This example is optimized for a **long sequence length (e.g., 240 days)** to capture annual patterns.
   ```yaml
-  # Example for your hypothesis generation
-  model_class: "Transformer-TS"
-  d_model: 768                 # Model width, balanced for long sequences
-  num_layers: 8                # Model depth, moderate to prevent gradient issues with long sequences
-  nhead: 8                     # Attention heads
-  dim_feedforward: 1024        # FFN size (4 * d_model)
-  num_timesteps: 120           # Crucial: ~1 year of historical data
-  dropout: 0.5                 # Stronger regularization for complex models
-  lr: 0.00005                  # Lower learning rate for stability
-  batch_size: 1024              # Smaller batch size to fit long sequences in VRAM
-  weight_decay: 0.01           # AdamW's weight decay
+
+  **Mission Objective:**
+  Train a state-of-the-art Transformer model for financial time series prediction. The primary goal is to maximize the model's ability to learn from long-term historical patterns (~1 year) while remaining robust against overfitting and fully utilizing the available GPU VRAM.
+
+  **Core Philosophy: "Deep Memory, Strong Regularization"**
+  The strategy is based on the hypothesis that significant predictive signals in finance are long-term and subtle. Therefore, we prioritize model depth and historical context over all else, and we use aggressive regularization to extract these signals from noise.
+
+  ---
+
+  ### Strategic Parameter Guidelines:
+
+  **1. Model Architecture (The Foundation)**
+
+  *   **`num_timesteps` (Sequence Length)**
+      *   **Principle:** This is the most critical parameter. A long history is essential for capturing annual cycles and structural market shifts.
+      *   **Value:** **Lock this at 240.** Do not change it.
+
+  *   **`num_layers` (Depth) & `d_model` (Width)**
+      *   **Principle:** The model must have sufficient capacity to process the long sequence. We favor depth, balanced with width.
+      *   **Starting Point:** Begin with `num_layers: 12` and `d_model: 1280`.
+      *   **Dynamic Logic:** If training is highly unstable (exploding/vanishing gradients) despite a low learning rate, consider reducing `num_layers` to 10 first, before reducing `d_model`.
+
+  **2. Regularization (The Shield against Overfitting)**
+
+  *   **`dropout`**
+    *   **Principle:** Essential for preventing a large model from memorizing noisy training data.
+    *   **Range:** Operate within a **high range of 0.3 to 0.5.**
+    *   **Dynamic Logic:** If the validation loss is significantly higher than the training loss early on, you are under-regularizing; lean towards 0.5. If both losses are high and struggling to decrease, you might be over-regularizing; lean towards 0.3.
+
+  *   **`weight_decay` (with AdamW optimizer)**
+    *   **Principle:** Penalizes large weights to encourage a simpler, more generalizable model.
+    *   **Range:** Operate within **0.01 to 0.05.**
+    *   **Dynamic Logic:** Similar to dropout, use this to control the generalization gap between training and validation loss.
+
+  **3. Training Dynamics (The Engine)**
+
+  *   **`learning_rate`**
+    *   **Principle:** A large, deep model requires a small, stable learning rate to converge properly.
+    *   **Starting Point:** **Begin at 5e-5.**
+    *   **Dynamic Logic:** Must be used with a scheduler (e.g., Cosine Annealing) and a warmup period (e.g., the first 5-10% of steps). If the loss becomes NaN, the learning rate is too high.
+
+  *   **`batch_size` (The VRAM Throttle)**
+    *   **Principle:** This is the primary lever for managing hardware resources. A larger batch size improves training speed and gradient stability.
+    *   **Objective:** **Maximize this value to achieve ~90% VRAM utilization.**
+    *   **Dynamic Logic:** Start with a high value like 1024. If an Out-Of-Memory (OOM) error occurs, reduce it in steps (e.g., to 768, then 512). If VRAM usage is consistently low, increase it.
   ```
 
   **4. Full Spectrum of Available Models:**
