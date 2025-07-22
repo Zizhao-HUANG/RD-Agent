@@ -41,38 +41,6 @@ evolving_strategy_factor_implementation_v1_system: |-
   {{ scenario }}
   Your code is expected to align the scenario in any form which means The user needs to get the exact factor values with your code as expected.
 
-  ------Crucial Implementation Guideline: Handling Grouped Operations on MultiIndex------
-  WARNING: A frequent and critical error occurs when performing grouped rolling calculations. Your full attention is required to avoid this pitfall.
-
-  **The Pitfall (The WRONG way):**
-  NEVER perform a rolling calculation directly on a grouped object that retains its original MultiIndex, like `df.groupby(level='instrument').rolling(...)`. This specific operation in pandas creates an invalid three-level index (e.g., `('instrument', 'datetime', 'instrument')`) which is difficult to repair and WILL cause a failure.
-
-  **The Mandated Solution (The ONLY correct way): The "Reset-Group-Set" Pattern**
-  To perform any calculation (especially rolling windows) on a per-instrument basis, you MUST follow this three-step pattern to ensure the index structure is always correct:
-
-  1.  **RESET:** First, flatten the MultiIndex into columns. This makes grouping explicit and safe.
-      Example:
-      ```python
-      df_reset = df.reset_index()
-      ```
-
-  2.  **GROUP & CALCULATE:** Now, perform your `groupby()` on the *column* (e.g., 'instrument') and then apply your calculation (e.g., `.rolling()`, `.shift()`, `.cumsum()`). The calculation is now performed on a standard, non-indexed group, which is robust.
-      Example:
-      ```python
-      # IMPORTANT: Ensure data is sorted for rolling operations to be correct!
-      df_reset.sort_values(by=['instrument', 'datetime'], inplace=True)
-      grouped_calculation = df_reset.groupby('instrument')['$volume'].rolling(window=20).sum()
-      ```
-
-  3.  **SET:** After the calculation, merge or assign the results back to your flattened DataFrame. Finally, restore the required `('datetime', 'instrument')` MultiIndex using `set_index()`. This is the final step to guarantee compliance with the output format.
-      Example:
-      ```python
-      # (After aligning the calculated series back to df_reset)
-      final_df = df_reset.set_index(['datetime', 'instrument'])
-      ```
-
-  By strictly adhering to the **"Reset-Group-Set"** pattern, you will prevent all index-related structural errors for grouped operations. This is not a suggestion, but a requirement for this task.
-
   To help you write the correct code, the user might provide multiple information that helps you write the correct code:
   1. The user might provide you the correct code to similar factors. Your should learn from these code to write the correct code.
   2. The user might provide you the failed former code and the corresponding feedback to the code. The feedback contains to the execution, the code and the factor value. You should analyze the feedback and try to correct the latest code.
@@ -204,11 +172,59 @@ select_implementable_factor_user: |-
 evaluator_output_format_system: |-
   User is trying to implement some factors in the following scenario:
   {{ scenario }}
-  User will provide you the format of the output. Please help to check whether the output is align with the format.
-  Please respond in the JSON format. Here is an example structure for the JSON output:
+
+  ---
+
+  ### CRITICAL TASK SWITCH: ENTERING EVALUATION MODE ###
+
+  Your ONLY role now is to act as an **Output Format Evaluator**.
+  DO NOT, under any circumstances, generate a new factor definition.
+  Your task is to analyze the user-provided DataFrame information and determine if its format is valid.
+
+  You MUST respond with a single JSON object. The values in the JSON object must be strings. The structure is MANDATORY:
   {
-      "output_format_decision": True,
-      "output_format_feedback": "The output format is correct."
+    "output_format_decision": "<'True' or 'False'>",
+    "output_format_feedback": "<A concise explanation for your decision.>"
+  }
+
+  ---
+
+  ### EXAMPLES ###
+
+  # Example 1: CORRECT FORMAT (Positive Case)
+  ## Input:
+  The factor name is 'Momentum_20'.
+  The output dataframe info is:
+  <class 'pandas.core.frame.DataFrame'>
+  MultiIndex: 48700 entries, (Timestamp('2018-01-02 00:00:00'), 'SH000300') to (Timestamp('2019-12-31 00:00:00'), 'SH600121')
+  Data columns (total 1 columns):
+   #   Column        Non-Null Count  Dtype
+  ---  ------        --------------  -----
+   0   Momentum_20   47485 non-null  float64
+  
+  ## Expected JSON Output:
+  {
+    "output_format_decision": "True",
+    "output_format_feedback": "The output format is correct. The DataFrame uses the correct ('datetime', 'instrument') MultiIndex and the column name 'Momentum_20' perfectly matches the factor name."
+  }
+
+  ---
+
+  # Example 2: INCORRECT FORMAT (Negative Case)
+  ## Input:
+  The factor name is 'Volatility_60'.
+  The output dataframe info is:
+  <class 'pandas.core.frame.DataFrame'>
+  MultiIndex: 48700 entries, (Timestamp('2018-01-02 00:00:00'), 'SH000300') to (Timestamp('2019-12-31 00:00:00'), 'SH600121')
+  Data columns (total 1 columns):
+   #   Column   Non-Null Count  Dtype
+  ---  ------   --------------  -----
+   0   factor   47485 non-null  float64
+
+  ## Expected JSON Output:
+  {
+    "output_format_decision": "False",
+    "output_format_feedback": "The output format is incorrect. The column name is 'factor', which does not match the expected factor name 'Volatility_60'. The column name must be identical to the factor name."
   }
 
 
@@ -238,39 +254,3 @@ evaluator_final_decision_v1_user: |-
   {{ code_feedback }}
   --------------Factor value feedback:---------------
   {{ value_feedback }}
-
-  ------The interface you should follow to write the runnable code------
-
-  ------Crucial Implementation Guideline: Handling Grouped Operations on MultiIndex------
-  WARNING: A frequent and critical error occurs when performing grouped rolling calculations. Your full attention is required to avoid this pitfall.
-
-  **The Pitfall (The WRONG way):**
-  NEVER perform a rolling calculation directly on a grouped object that retains its original MultiIndex, like `df.groupby(level='instrument').rolling(...)`. This specific operation in pandas creates an invalid three-level index (e.g., `('instrument', 'datetime', 'instrument')`) which is difficult to repair and WILL cause a failure.
-
-  **The Mandated Solution (The ONLY correct way): The "Reset-Group-Set" Pattern**
-  To perform any calculation (especially rolling windows) on a per-instrument basis, you MUST follow this three-step pattern to ensure the index structure is always correct:
-
-  1.  **RESET:** First, flatten the MultiIndex into columns. This makes grouping explicit and safe.
-      ```python
-      # Example:
-      df_reset = df.reset_index()
-      ```
-
-  2.  **GROUP & CALCULATE:** Now, perform your `groupby()` on the *column* (e.g., 'instrument') and then apply your calculation (e.g., `.rolling()`, `.shift()`, `.cumsum()`). The calculation is now performed on a standard, non-indexed group, which is robust.
-      ```python
-      # Example:
-      # IMPORTANT: Ensure data is sorted for rolling operations to be correct!
-      df_reset.sort_values(by=['instrument', 'datetime'], inplace=True)
-      grouped_calculation = df_reset.groupby('instrument')['$volume'].rolling(window=20).sum()
-      ```
-
-  3.  **SET:** After the calculation, merge or assign the results back to your flattened DataFrame. Finally, restore the required `('datetime', 'instrument')` MultiIndex using `set_index()`. This is the final step to guarantee compliance with the output format.
-      ```python
-      # Example:
-      # (After aligning the calculated series back to df_reset)
-      final_df = df_reset.set_index(['datetime', 'instrument'])
-      ```
-
-  By strictly adhering to the **"Reset-Group-Set"** pattern, you will prevent all index-related structural errors for grouped operations. This is not a suggestion, but a requirement for this task.
-
-  ------Crucial Output Format Constraints------
