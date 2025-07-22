@@ -23,37 +23,39 @@ hypothesis_and_feedback: |-
 last_hypothesis_and_feedback: |-
   ## Hypothesis
   {{ experiment.hypothesis }}
-  ## Specific task: 
-  {% for task in experiment.sub_tasks %}
-  {% if task is not none and task.get_task_brief_information is defined %}
-  {{ task.get_task_brief_information() }}
-  {% endif %}
-  {% endfor %}
-  ## Backtest Analysis and Feedback:
+  ## Specific Task
+  {% for task in experiment.sub_tasks %}{% if task is not none and task.get_task_brief_information is defined %}{{ task.get_task_brief_information() }}{% endif %}{% endfor %}
+  
+  ## Backtest Analysis and Feedback
   {% if experiment.result is not none %}
-  Backtest Result: {{ experiment.result.loc[["IC", "1day.excess_return_without_cost.annualized_return", "1day.excess_return_without_cost.max_drawdown"]] }}
+  **Key Metrics:** {{ experiment.result.loc[["IC", "1day.excess_return_without_cost.annualized_return", "1day.excess_return_without_cost.max_drawdown"]] }}
   {% endif %}
-  Training Log: 
-  Here, you need to focus on analyzing whether there are any issues with the training. If any problems are identified, you must correct them in the next iteration and clearly describe how the changes will be made in the hypothesis.
+
+  **Training Log Analysis Mandate:**
+  **You MUST scrutinize the following training log.** Your primary task is to identify signs of overfitting (e.g., large gap between training/validation loss), underfitting (e.g., loss plateaus at a high value), or training instability (e.g., spiky loss curves). Your new hypothesis in the next step **MUST** explicitly state how it addresses any problems found here.
+  ```
   {{ experiment.stdout }} 
+  ```
+
+  **Previous Agent's Analysis:**
   Observation: {{ feedback.observations }}
   Evaluation: {{ feedback.hypothesis_evaluation }}
   Decision (Whether this experiment is SOTA): {{ feedback.decision }}
-  New Hypothesis (Given in feedback stage, just for reference, and can be accepted or rejected in the next round): {{ feedback.new_hypothesis }}
-  Reasoning (Justification for the new hypothesis): {{ feedback.reason }}
+  Suggested New Hypothesis (For reference only): {{ feedback.new_hypothesis }}
+  Reasoning for Suggestion: {{ feedback.reason }}
 
 sota_hypothesis_and_feedback: |-
-  ## Hypothesis
+  ## SOTA Hypothesis
   {{ experiment.hypothesis }}
-  ## Specific task: 
+  ## SOTA Specific Task
   {% for task in experiment.sub_tasks %}
   {% if task is not none and task.get_task_brief_information is defined %}
   {{ task.get_task_brief_information() }}
   {% endif %}
   {% endfor %}
-  ## Backtest Analysis and Feedback:
+  ## SOTA Backtest Analysis
   {% if experiment.result is not none %}
-  Backtest Result: {{ experiment.result.loc[["IC", "1day.excess_return_without_cost.annualized_return", "1day.excess_return_without_cost.max_drawdown"]] }}
+  **SOTA Performance:** {{ experiment.result.loc[["IC", "1day.excess_return_without_cost.annualized_return", "1day.excess_return_without_cost.max_drawdown"]] }}
   {% endif %}
   Training Log: {{ experiment.stdout }}
   Observation: {{ feedback.observations }}
@@ -61,10 +63,10 @@ sota_hypothesis_and_feedback: |-
   Decision (Whether this experiment is SOTA): {{ feedback.decision }}
 
 hypothesis_output_format: |-
-  The output should follow JSON format. The schema is as follows:
+  The output must be a JSON object adhering to the following schema. Your response should contain ONLY the JSON object and nothing else.
   {
-  "hypothesis": "An exact, testable, and innovative statement derived from previous experimental trace analysis. Avoid overly general ideas and ensure precision. The hypothesis should clearly specify the exact approach and expected improvement in performance in two or three sentences.",
-  "reason": "Provide a clear, logical explanation for why this hypothesis was proposed, grounded in evidence (e.g., trace history, domain principles). Reason should be short with no more than two sentences.",
+    "hypothesis": "A high-level conceptual blueprint for a new idea. **This value MUST be a single string.** Your role is to describe the *'what'* and the *'why'*, not the *'how'*. \n\n- **If proposing a factor:** Describe the factor's name and the economic or market intuition it aims to capture. Example: 'A factor named 'CalmTrend' that measures the strength of a price trend, penalized by its recent volatility, to identify sustainable momentum.' **DO NOT** provide the calculation formula.\n\n- **If proposing a model:** Describe the model's name, type, and core conceptual architecture. Example: 'A deep Transformer model with 12 layers and a high dropout rate of 0.4, designed to capture long-term dependencies in the feature set.' **DO NOT** provide detailed hyperparameters or code.\n\n**CRITICAL:** Your entire output for this field must be descriptive natural language. No Python code, YAML, or mathematical formulas are allowed here.",
+    "reason": "A concise, logical justification for the hypothesis. It must connect the new idea to the findings or limitations of previous experiments and explain why it is expected to improve performance. Limit to two or three sentences."
   }
 
 factor_hypothesis_output_format: |-
@@ -82,7 +84,6 @@ hypothesis_output_format_with_action: |-
   "reason": "Provide a detailed, multi-sentence justification. Your reason should first connect the hypothesis to the limitations or findings of previous experiments. Then, explain the underlying logic or mechanism of why the proposed hypothesis is expected to work. Finally, state the specific improvement you anticipate (e.g., improved accuracy, better ranking performance, or a more robust factor)."
   }
 
-  
 model_hypothesis_specification: |-
   **Input Context:** You will be provided with the following critical information sources:
   * `sota_hypothesis_and_feedback`: The architecture and performance report of the current State-of-the-Art (SOTA) model. This is your target to beat.
@@ -222,7 +223,7 @@ factor_hypothesis_specification: |-
   *   **Implementation Feasibility:** While you focus on the concept, it must be grounded in what is possible. All proposed factor concepts MUST be translatable into `qlib`'s operator language using the available data: `$open`, `$high`, `$low`, `$close`, `$volume`, and `$factor`.
   *   **SOTA Awareness:** The SOTA (State-of-the-Art) factor library is automatically updated with successful factors from previous trials. **Do not re-propose factors that have already succeeded.** Your goal is to find *new* sources of alpha that can improve upon the current SOTA.
   *   **Iterative Strategy:** Analyze the feedback from previous trials. If a conceptual direction (e.g., Volatility) is showing promise, propose refinements or variations. If a direction is consistently failing, pivot to a different, unexplored category from your toolkit or invent a new one.
-  *   **Generation Quota:** Propose 1-3 distinct, well-reasoned factor hypotheses in each response. Focus on quality and novelty over quantity.
+  *   **Generation Quota:** Propose 3 distinct, well-reasoned factor hypotheses in each response. Focus on quality and novelty over quantity.
 
   Now, based on the provided history and feedback, generate your next set of hypotheses.
 
@@ -249,32 +250,31 @@ factor_experiment_output_format: |-
   }
 
 model_experiment_output_format: |-
-  So far please only design one model to test the hypothesis! 
-  The output should follow JSON format. The schema is as follows (value in training_hyperparameters is a basic setting for reference, you CAN CHANGE depends on the previous training log): 
+  You must design **exactly one model** to test the hypothesis.
+  The output must be a JSON object adhering to the following schema. Your response should contain ONLY the JSON object.
   {
     "model_name (The name of the model)": {
-        "description": "A detailed description of the model",
-        "formulation": "A LaTeX formula representing the model's formulation",
-        "architecture": "A detailed description of the model's architecture, e.g., neural network layers or tree structures",
+        "description": "A detailed description of the model, linking it back to the parent hypothesis.",
+        "formulation": "A LaTeX formula representing the model's core mathematical operation.",
+        "architecture": "A detailed, layer-by-layer description of the model's architecture (e.g., neural network layers, tree structures). This must be specific enough for direct translation into code.",
         "variables": {
             "\\hat{y}_u": "The predicted output for node u",
-            "variable_name_2": "Description of variable 2",
-            "variable_name_3": "Description of variable 3"
+            "variable_name_2": "Description of variable 2"
         },
         "hyperparameters": {
             "hyperparameter_name_1": "value of hyperparameter 1",
-            "hyperparameter_name_2": "value of hyperparameter 2",
-            "hyperparameter_name_3": "value of hyperparameter 3"
+            "hyperparameter_name_2": "value of hyperparameter 2"
         },
-        "training_hyperparameters": {  # All values are for reference; you can set them yourself
+        "training_hyperparameters": {
+            "# CRITICAL: The values below are generic baselines. You MUST critically evaluate and adjust them based on the proposed model's complexity and the analysis of previous training logs. For example, a larger model may require a smaller learning rate or more epochs.": "",
             "n_epochs": "100",
             "lr": "5e-5",
-            "early_stop": 10, # highly recommended to set it to **10** for a more stable training
+            "early_stop": 10,
             "batch_size": 512,
             "weight_decay": 0.01
         },
-        "model_type": "Tabular or TimeSeries"  # Should be one of "Tabular" or "TimeSeries"
-    },
+        "model_type": "Tabular or TimeSeries"
+    }
   }
 
 factor_feedback_generation:
@@ -341,25 +341,28 @@ factor_feedback_generation:
 
 model_feedback_generation:
   system: |-
-    You are a professional quantitative analysis assistant in top-tier hedge fund.
+    You are a professional quantitative analysis assistant at a top-tier hedge fund. Your task is to provide structured, data-driven feedback on model experiments.
 
-    The task is described in the following scenario:
+    **Scenario:**
     {{ scenario }}
 
-    You will receive a quantitative model hypothesis, its specific task description, and it market backtest result. 
-    Your feedback should specify whether the current result supports or refutes the hypothesis, compare it with previous SOTA results, examine the model's training logs to analyze whether there are issues with hyperparameter settings, and suggest improvements or new directions.
+    **Your Process:**
+    1.  **Analyze Training Log First:** Scrutinize the training log for any issues (overfitting, underfitting, instability). This is your primary diagnostic step.
+    2.  **Compare Performance:** Compare the current experiment's key metrics (IC, Annualized Return, Max Drawdown) against the SOTA.
+    3.  **Evaluate Hypothesis:** Determine if the performance results support or refute the initial hypothesis.
+    4.  **Formulate Next Steps:** Propose a new, improved hypothesis based on your analysis.
+    5.  **Make a Decision:** Decide whether the current model is good enough to become the new SOTA.
 
-    Please provide detailed and constructive feedback.
-    Example JSON Structure for Result Analysis:
+    **Output Format:**
+    You MUST provide your analysis in the following JSON format.
     {
-      "Observations": "First analyze the model's training logs to determine whether there are any issues with its parameter settings. Then clearly summarize the current results and the SOTA results with exact scores and any notable patterns. Limit your summary to no more than three concise, data-focused sentences.",
-      "Feedback for Hypothesis": "Explicitly confirm or refute the hypothesis based on specific data points or performance trends. Limit to two sentences.",
-      "New Hypothesis": "Propose a revised hypothesis, considering observed patterns and limitations in the current one. Limit to no more than two sentences.",
-      "Reasoning": "Explain the rationale for the new hypothesis using specific trends or performance shifts. Be concise but technically complete. Limit to two sentences.",
-      "Decision": <true or false>,
+      "observations": "Start by analyzing the training log. Then, summarize the key performance differences between the current experiment and SOTA. Be concise and data-focused (max 3 sentences).",
+      "hypothesis_evaluation": "Explicitly state whether the results support or refute the hypothesis, citing specific metrics. (max 2 sentences).",
+      "new_hypothesis": "Propose a revised or entirely new hypothesis to address the findings (e.g., architectural change, hyperparameter tuning). (max 2 sentences).",
+      "reasoning": "Explain the logic for your new hypothesis, directly linking it to your observations of the current experiment's performance or training behavior. (max 2 sentences).",
+      "decision_to_update_sota": <true or false>,
+      "justification_for_decision": "Provide a brief reason for your decision on updating the SOTA. Example: 'Although the IC is slightly lower, the significant improvement in annualized return justifies updating the SOTA.'"
     }
-
-    
   user: |-
     {% if sota_hypothesis %} 
     # SOTA Round Information:
@@ -388,28 +391,45 @@ model_feedback_generation:
 
 action_gen:
   system: |-
-    Quantitative investment is a data-driven approach to asset management that relies on mathematical models, statistical techniques, and computational methods to analyze financial markets and make investment decisions. Two essential components of this approach are factors and models.
-  
-    You are one of the most authoritative quantitative researchers at a top Wall Street hedge fund. I need your expertise to develop new factors and models that can enhance our investment returns. Based on the given context, I will ask for your assistance in designing and implementing either factors or a model.
+    You are a strategic decision-making module within the RD-Agent(Q) framework. Your sole responsibility is to solve the "credit assignment" problem after each experiment. Based on the complete history of trials, you must determine where the next unit of research effort should be allocated to maximize the probability of performance improvement.
 
-    You will receive a series of experiments, including their factors and models, and their results. 
-    Your task is to analyze the previous experiments and decide whether the next experiment should focus on factors or models.
+    Your task is to analyze the provided experimental history and decide whether the next iteration should focus on **improving factors** or **improving the model**.
 
-    Example JSON Structure for your return:
+    To make your decision, you MUST reason through the following guiding questions:
+    1.  **Where is the performance bottleneck?**
+        - Are the factors' predictive power (IC) consistently low, even with a strong model? (Suggests -> `factor`)
+        - Is the model failing to learn from good factors, indicated by poor backtest results despite high-quality factor inputs or training issues like overfitting? (Suggests -> `model`)
+
+    2.  **Where is the "low-hanging fruit" for improvement?**
+        - Has the model architecture been simple and largely unchanged, while many factors have been tried? (Suggests -> `model`)
+        - Have we been stuck on one complex model, while the factor library is still small and basic? (Suggests -> `factor`)
+
+    3.  **What is the recent failure/success pattern?**
+        - Have the last several attempts to create new factors resulted in marginal or negative gains? (Suggests -> `model`)
+        - Have recent model changes failed to improve performance, suggesting the input features are the limiting element? (Suggests -> `factor`)
+
+    Based on your analysis of these questions, output your final decision.
+    
+    The output must be a JSON object with a single key "action".
+    Example:
     {
-      "action": "factor" or "model",  # You must choose one of the two
+      "action": "model"
     }
-
   user: |-
+    **Analyze the following experimental history to determine the next action.**
+
     {% if hypothesis_and_feedback|length == 0 %}
-    It is the first round of hypothesis generation. The user has no hypothesis on this scenario yet.
+    This is the first round of hypothesis generation. No prior experiments exist. Start with 'factor' to build a foundational feature set.
     {% else %}
-    The former hypothesis and the corresponding feedbacks are as follows:
+    **Complete Historical Archive:**
     {{ hypothesis_and_feedback }}
     {% endif %}
-
   
     {% if last_hypothesis_and_feedback != "" %}
-    Here is the last trial's hypothesis and the corresponding feedback. The main feedback includes a new hypothesis for your reference only. You should evaluate the entire reasoning chain to decide whether to adopt it, propose a more suitable hypothesis, or transfer and optimize it for another scenario (e.g., factor/model), since transfers are generally encouraged:
+    **Most Recent Trial Analysis:**
+    This was the last experiment. Pay close attention to its feedback, as it contains the most current information about the system's state.
     {{ last_hypothesis_and_feedback }}
     {% endif %}
+
+    **Your Decision:**
+    Based on your comprehensive analysis of the history and the guiding questions, what is the single most logical next action?
