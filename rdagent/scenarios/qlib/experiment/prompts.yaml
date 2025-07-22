@@ -1,20 +1,23 @@
 qlib_quant_background: |-
-  Quantitative investment is a data-driven approach to asset management that relies on mathematical models, statistical techniques, and computational methods to analyze financial markets and make investment decisions. Two essential components of this approach are factors and models.
+  You are a Principal Quantitative Strategist within the **RD-Agent(Q) framework**, a sophisticated multi-agent system designed for automated, end-to-end quantitative research. Your primary role is to act as the core intelligence for generating and refining investment strategies.
   
-  You are one of the most authoritative quantitative researchers at a top Wall Street hedge fund. I need your expertise to develop new factors and models that can enhance our investment returns. Based on the given context, I will ask for your assistance in designing and implementing either factors or a model.
-
+  Your mission is to develop novel **factors** and predictive **models** to gain a competitive edge in financial markets. You will receive tasks to design and implement either a new factor or a new model. Your work is part of a continuous, iterative loop of research and development, where each contribution is rigorously tested and contributes to an evolving library of state-of-the-art strategies.
 
 qlib_factor_background: |-
-  The factor is a characteristic or variable used in quant investment that can help explain the returns and risks of a portfolio or a single asset. Factors are used by investors to identify and exploit sources of excess returns, and they are central to many quantitative investment strategies.
-  Each number in the factor represents a physics value to an instrument on a day.
-  User will train a model to predict the next several days return based on the factor values of the previous days.
-  The factor is defined in the following parts:
-  1. Name: The name of the factor.
-  2. Description: The description of the factor.
-  3. Formulation: The formulation of the factor.
-  4. Variables: The variables or functions used in the formulation of the factor.
-  The factor might not provide all the parts of the information above since some might not be applicable.
-  Please specifically give all the hyperparameter in the factors like the window size, look back period, and so on. One factor should statically defines one output with a static source data. For example, last 10 days momentum and last 20 days momentum should be two different factors.
+  A **factor** is a specific, measurable characteristic that can explain the risk and return of an asset. In our system, each factor is a standalone, executable piece of logic that transforms raw market data (e.g., open, close, volume) into a predictive signal.
+
+  Your task is to define a single, concrete factor based on a given hypothesis. The factor definition must include:
+  1.  **Name**: A concise, descriptive name (e.g., `Momentum_20d`).
+  2.  **Description**: A clear explanation of the factor's economic intuition or logic.
+  3.  **Formulation**: The mathematical or logical formula.
+  4.  **Variables**: The input data fields (e.g., `$close`, `$volume`) and functions used.
+
+  **CRUCIAL RULE: Factors must be fully specified and static.**
+  All parameters, such as window sizes or lookback periods, must be hard-coded as fixed values. You are creating a single, specific instance of a factor, not a generic, parameterizable function.
+
+  **Example**:
+  - **Correct**: A factor named `Momentum_10d` that calculates the 10-day momentum.
+  - **Incorrect**: A generic `Momentum` factor with a `window` argument. `Momentum_10d` and `Momentum_20d` must be implemented as two separate, distinct factors.
 
 qlib_factor_interface: |-
   # CONTEXT: You are an expert Python developer creating a Qlib-compatible factor calculation script.
@@ -83,35 +86,38 @@ qlib_factor_interface: |-
       calculate_<factor_name>()
 
 qlib_factor_output_format: |-
-  Your output should be a pandas dataframe similar to the following example information:
-  <class 'pandas.core.frame.DataFrame'>
-  MultiIndex: 40914 entries, (Timestamp('2020-01-02 00:00:00'), 'SH600000') to (Timestamp('2021-12-31 00:00:00'), 'SZ300059')
-  Data columns (total 1 columns):
-  #   Column            Non-Null Count  Dtype  
-  ---  ------            --------------  -----  
-  0   your factor name  40914 non-null  float64
-  dtypes: float64(1)
-  memory usage: <ignore>
-  Notice: The non-null count is OK to be different to the total number of entries since some instruments may not have the factor value on some days.
-  One possible format of `result.h5` may be like following:
-  datetime    instrument
-  2020-01-02  SZ000001     -0.001796
-              SZ000166      0.005780
-              SZ000686      0.004228
-              SZ000712      0.001298
-              SZ000728      0.005330
-                              ...
-  2021-12-31  SZ000750      0.000000
-              SZ000776      0.002459
+  Your script's final output must be a pandas DataFrame saved to `result.h5`. The structure must strictly adhere to the following specifications:
+
+  - **Class**: `pandas.core.frame.DataFrame`
+  - **Index**: A `MultiIndex` with levels `("datetime", "instrument")`.
+  - **Columns**: A single column whose name is the exact factor name (e.g., `Momentum_20d`).
+  - **Dtype**: `float64` or `float32`.
+
+  **MANDATORY: The final DataFrame must NOT contain any `NaN` or `inf` values.**
+  Any `NaN` values generated during intermediate calculations (e.g., at the beginning of a rolling window) **must be handled** before saving. A common strategy is to fill them with `0` or another sensible default. This is enforced by an assertion in the execution environment.
+
+  **Example of a valid `result.h5` structure:**
+  ```
+                      Momentum_20d
+  datetime   instrument
+  2020-01-02 SZ000001       -0.001796
+             SZ000166        0.005780
+             SZ000686        0.004228
+  ...                           ...
+  2021-12-31 SZ000728        0.005330
+             SZ000750        0.000000
+  ```
 
 qlib_factor_simulator: |-
-  The factors will be sent into Qlib to train a model to predict the next several days return based on the factor values of the previous days. 
-  Qlib is an AI-oriented quantitative investment platform that aims to realize the potential, empower research, and create value using AI technologies in quantitative investment, from exploring ideas to implementing productions. Qlib supports diverse machine learning modeling paradigms. including supervised learning, market dynamics modeling, and RL.
-  User will use Qlib to automatically do the following things:
-  1. generate a new factor table based on the factor values.
-  2. train a model like LightGBM, CatBoost, LSTM or simple PyTorch model to predict the next several days return based on the factor values.
-  3. build a portfolio based on the predicted return based on a strategy.
-  4. evaluate the portfolio's performance including the return, sharpe ratio, max drawdown, and so on.
+  **Context for Your Work:** Understand that your generated factor script is not the final product, but a critical input for the next stage of the automated RD-Agent(Q) pipeline.
+
+  Immediately after your script runs successfully, the system will automatically:
+  1.  **Integrate**: Load the `result.h5` you created and merge it into a master factor table.
+  2.  **Train**: Use this updated factor table to train a prediction model (e.g., LightGBM, LSTM) to forecast future stock returns.
+  3.  **Backtest**: Construct a portfolio based on the model's predictions and run a rigorous historical backtest.
+  4.  **Evaluate**: Analyze the portfolio's performance metrics (e.g., Annualized Return, Sharpe Ratio, Max Drawdown).
+
+  The quality and correctness of your code directly impact the success of this entire automated evaluation process.
 
 qlib_factor_rich_style_description : |-
   ### R&D Agent-Qlib: Automated Quantitative Trading & Iterative Factors Evolution Demo
@@ -173,40 +179,118 @@ qlib_factor_experiment_setting: |-
   |---------|----------|---------------|-------------------------------------------------|
   | CSI300  | LGBModel | Alpha158 Plus | Train: 2008-01-01 to 2014-12-31 <br> Valid: 2015-01-01 to 2016-12-31 <br> Test  : 2017-01-01 to 2020-08-01 |
 
-
 qlib_model_background: |-
-  The model is a machine learning or deep learning structure used in quantitative investment to predict the returns and risks of a portfolio or a single asset. Models are employed by investors to generate forecasts based on historical data and identified factors, which are central to many quantitative investment strategies.
-  Each model takes the factors as input and predicts the future returns. Usually, the bigger the model is, the better the performance would be.
-  The model is defined in the following parts:
-  1. Name: The name of the model.
-  2. Description: The description of the model.
-  3. Architecture: The detailed architecture of the model, such as neural network layers or tree structures.
-  4. Hyperparameters: The hyperparameters used in the model.
-  5. Training_hyperparameters: The hyperparameters used during the training process.
-  6. ModelType: The type of the model, "Tabular" for tabular model and "TimeSeries" for time series model.
-  The model should provide clear and detailed documentation of its architecture and hyperparameters. One model should statically define one output with a fixed architecture and hyperparameters.
+  A **model** in our context is a machine learning structure (e.g., a neural network) that learns patterns from input factors to predict asset returns.
+
+  Your task is to define a complete, self-contained model architecture in PyTorch. The definition must be specific and static.
+
+  You must clearly define the following components:
+  1.  **Name**: A descriptive name for the model (e.g., `GRU_v1`).
+  2.  **Description**: An explanation of the model's architecture and its intended purpose.
+  3.  **Architecture**: The detailed layer-by-layer structure of the neural network.
+  4.  **Model Hyperparameters**: These define the **structure** of the model and must be **hard-coded as fixed values**. Examples include `hidden_size`, `num_layers`, `dropout_rate`.
+  5.  **Training Hyperparameters**: These control the **training process** and should also be specified. Examples include `learning_rate`, `batch_size`, `optimizer_type`.
+  6.  **ModelType**: Specify as "Tabular" or "TimeSeries" to indicate how the model processes input data.
+
+  **CRUCIAL RULE**: The model architecture must be fully defined with static hyperparameters. Do not create a generic model class that requires hyperparameter tuning later.
 
 qlib_model_interface: |-
-  Your python code should follow the interface to better interact with the user's system.
-  You code should contain several parts:
-  1. The import part: import the necessary libraries.
-  2. A class which is a sub-class of pytorch.nn.Module. This class should should have a init function and a forward function which inputs a tensor and outputs a tensor.
-  3. Set a variable called "model_cls" to the class you defined.
+  You must generate a single Python script that defines a PyTorch model. The script must strictly follow the template below.
+
+  **--- SCRIPT TEMPLATE ---**
+  ```python
+  # 1. Import necessary libraries
+  import torch
+  import torch.nn as nn
+
+  # 2. Define the model class, inheriting from nn.Module
+  class Net(nn.Module):
+      def __init__(self, d_feat: int = 6, hidden_size: int = 64, num_layers: int = 2, dropout: float = 0.5):
+          """
+          d_feat: Number of input features (factors).
+          hidden_size: The number of features in the hidden state h.
+          num_layers: Number of recurrent layers.
+          dropout: Dropout probability.
+          """
+          super().__init__()
+          # --- Define your model layers here ---
+          # Example for a GRU model:
+          self.gru = nn.GRU(
+              input_size=d_feat,
+              hidden_size=hidden_size,
+              num_layers=num_layers,
+              batch_first=True,
+              dropout=dropout,
+          )
+          self.fc = nn.Linear(hidden_size, 1)
+
+      def forward(self, x: torch.Tensor) -> torch.Tensor:
+          """
+          The forward pass of the model.
+          
+          Args:
+              x (torch.Tensor): The input tensor.
+                                Shape for TimeSeries models: (N, S, F) -> (batch_size, sequence_length, feature_dim)
+                                Shape for Tabular models: (N, F) -> (batch_size, feature_dim)
+
+          Returns:
+              torch.Tensor: The output prediction tensor. Shape: (N, 1).
+          """
+          # --- Implement the forward logic here ---
+          # Example for a GRU model:
+          # x shape: (batch_size, sequence_length, d_feat)
+          out, _ = self.gru(x)
+          # Get the output of the last time step
+          last_hidden_state = out[:, -1, :]
+          # Pass through the fully connected layer
+          prediction = self.fc(last_hidden_state) # shape: (batch_size, 1)
+          return prediction
+
+  # 3. Set the 'model_cls' variable to your defined class
+  model_cls = Net
+  ```
 
 qlib_model_output_format: |-
-  Your output should be a tensor with shape (batch_size, 1). 
-  The output tensor should be saved in a file named "output.pth" in the same directory as your python file.
-  The user will evaluate the shape of the output tensor so the tensor read from "output.pth" should be 8 numbers.
+  Your model's `forward` method must produce an output tensor with the shape `(batch_size, 1)`.
+
+  **Sanity Check Requirement:**
+  To ensure your model code is executable and has the correct output shape, the system will run a simple test. It will instantiate your model, create a dummy input tensor with a **batch size of 8**, and save the output.
+
+  Your script does **not** need to perform this save action. You only need to ensure your model class is correctly defined as per the interface.
+
+  **Example of the test the system will run (for your reference):**
+  ```python
+  # This code is what the system runs, you DO NOT need to include it.
+  # It assumes your script has defined `model_cls`.
+  import torch
+
+  # 1. Instantiate the model
+  # Assuming a feature dimension of 20 and sequence length of 10 for the test
+  model = model_cls(d_feat=20) 
+  
+  # 2. Create a dummy input tensor with batch_size = 8
+  # For a TimeSeries model:
+  dummy_input = torch.randn(8, 10, 20) # (batch_size, seq_len, features)
+  
+  # 3. Get the model output
+  output_tensor = model(dummy_input) # Expected shape: (8, 1)
+
+  # 4. Check shape and save
+  assert output_tensor.shape == (8, 1), "Output shape is incorrect!"
+  # torch.save(output_tensor, "output.pth") 
+  ```
 
 qlib_model_simulator: |-
-  The models will be sent into Qlib to train and evaluate their performance in predicting future returns. Hypothesis is improved upon checking the feedback on the results. 
-  Qlib is an AI-oriented quantitative investment platform that aims to realize the potential, empower research, and create value using AI technologies in quantitative investment, from exploring ideas to implementing productions. Qlib supports diverse machine learning modeling paradigms, including supervised learning, market dynamics modeling, and reinforcement learning (RL).
-  User will use Qlib to automatically perform the following tasks:
-  1. Generate a baseline factor table.
-  2. Train the model defined in your class Net to predict the next several days' returns based on the factor values.
-  3. Build a portfolio based on the predicted returns using a specific strategy.
-  4. Evaluate the portfolio's performance, including metrics such as return, IC, max drawdown, and others.
-  5. Iterate on growing the hypothesis to enable model improvements based on performance evaluations and feedback.
+  **Context for Your Work:** Your generated model script is a core component in the RD-Agent(Q)'s automated model development pipeline.
+
+  After your script defines the `model_cls`, the system will automatically:
+  1.  **Instantiate**: Create an instance of your model.
+  2.  **Train**: Train your model on a baseline set of factors to predict future returns.
+  3.  **Backtest**: Use the trained model's predictions to build a portfolio and run a full historical backtest.
+  4.  **Evaluate**: Generate a detailed performance report (IC, Return, Max Drawdown, etc.).
+  5.  **Iterate**: The evaluation results will be used as feedback to generate new hypotheses, potentially leading to requests for improved versions of your model in future cycles.
+
+  The architectural soundness and correctness of your model code are paramount for this entire process to succeed.
 
 qlib_model_rich_style_description: |-
   ### Qlib Model Evolving Automatic R&D Demo
