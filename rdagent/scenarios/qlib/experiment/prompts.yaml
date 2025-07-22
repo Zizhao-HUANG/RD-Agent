@@ -17,41 +17,70 @@ qlib_factor_background: |-
   Please specifically give all the hyperparameter in the factors like the window size, look back period, and so on. One factor should statically defines one output with a static source data. For example, last 10 days momentum and last 20 days momentum should be two different factors.
 
 qlib_factor_interface: |-
-  Your python code should follow the interface to better interact with the user's system.
-  Your python code should contain the following part: the import part, the function part, and the main part. You should write a main function name: "calculate_{function_name}" and call this function in "if __name__ == __main__" part. Don't write any try-except block in your python code. The user will catch the exception message and provide the feedback to you.
-  User will write your python code into a python file and execute the file directly with "python {your_file_name}.py". You should calculate the factor values and save the result into a HDF5(H5) file named "result.h5" in the same directory as your python file. The result file is a HDF5(H5) file containing a pandas dataframe. The index of the dataframe is the "datetime" and "instrument", and the single column name is the factor name,and the value is the factor value. The result file should be saved in the same directory as your python file.
+  # CONTEXT: You are an expert Python developer creating a Qlib-compatible factor calculation script.
+  # OBJECTIVE: Generate a standalone Python script to calculate a single financial factor.
 
-  ------Crucial Implementation Guideline: Handling Grouped Operations on MultiIndex------
-  WARNING: A frequent and critical error occurs when performing grouped rolling calculations. Your full attention is required to avoid this pitfall.
+  # --- RULES ---
+  - The script must be directly executable: `python <file_name>.py`
+  - It must contain a single public function: `calculate_<factor_name>()`.
+  - Use a standard main guard: `if __name__ == "__main__":`.
+  - Do NOT use `try/except` blocks.
 
-  **The Pitfall (The WRONG way):**
-  NEVER perform a rolling calculation directly on a grouped object that retains its original MultiIndex, like `df.groupby(level='instrument').rolling(...)`. This specific operation in pandas creates an invalid three-level index (e.g., `('instrument', 'datetime', 'instrument')`) which is difficult to repair and WILL cause a failure.
+  # --- I/O SPECIFICATION ---
+  - **Input**: Load data from `daily_pv.h5` using `pd.read_hdf("daily_pv.h5", key="data")`.
+  - **Output**: Save the result to `result.h5` with key `"data"`.
+  - **Output DataFrame Structure**:
+    - **Index**: A `MultiIndex` of `("datetime", "instrument")`.
+    - **Columns**: A single column named `<FactorName>`.
+    - **Dtype**: `float`.
+    - **Values**: Must not contain any `NaN` or `inf` values.
 
-  **The Mandated Solution (The ONLY correct way): The "Reset-Group-Set" Pattern**
-  To perform any calculation (especially rolling windows) on a per-instrument basis, you MUST follow this three-step pattern to ensure the index structure is always correct:
+  # --- CORE LOGIC: The "Reset-Group-Set" Pattern ---
+  # This pattern is MANDATORY for any grouped rolling/shifting operations to avoid index alignment errors.
 
-    1. **RESET:** First, flatten the MultiIndex into columns. This makes grouping explicit and safe.
-       Example:
-         ```python
-         df_reset = df.reset_index()
-         ```
+  # 1. RESET: Flatten the MultiIndex to work with regular columns.
+  df_reset = df.reset_index()
+  df_reset.sort_values(["instrument", "datetime"], inplace=True) # Crucial for time-series ops
 
-    2. **GROUP & CALCULATE:** Now, perform your `groupby()` on the *column* (e.g., 'instrument') and then apply your calculation (e.g., `.rolling()`, `.shift()`, `.cumsum()`). The calculation is now performed on a standard, non-indexed group, which is robust.
-       Example:
-         ```python
-         # IMPORTANT: Ensure data is sorted for rolling operations to be correct!
-         df_reset.sort_values(by=['instrument', 'datetime'], inplace=True)
-         grouped_calculation = df_reset.groupby('instrument')['$volume'].rolling(window=20).sum()
-         ```
+  # 2. GROUP & CALCULATE: Perform calculations on the flattened DataFrame.
+  #    Use `.transform()` to ensure the output Series has a matching index.
+  #    Example for a 20-day rolling sum of volume:
+  df_reset["factor_value"] = (
+      df_reset.groupby("instrument")["$volume"]
+              .transform(lambda s: s.rolling(20).sum())
+  )
+  # WARNING: NEVER do `df.groupby(...).rolling(...)` directly. It creates an incompatible index.
 
-    3. **SET:** After the calculation, merge or assign the results back to your flattened DataFrame. Finally, restore the required `('datetime', 'instrument')` MultiIndex using `set_index()`. This is the final step to guarantee compliance with the output format.
-       Example:
-         ```python
-         # (After aligning the calculated series back to df_reset)
-         final_df = df_reset.set_index(['datetime', 'instrument'])
-         ```
+  # 3. SET: Restore the MultiIndex and rename the column for the final output.
+  out = (
+      df_reset[["datetime", "instrument", "factor_value"]]
+      .set_index(["datetime", "instrument"])
+      .rename(columns={"factor_value": "<FactorName>"})
+  )
 
-    By strictly adhering to the **"Reset-Group-Set"** pattern, you will prevent all index-related structural errors for grouped operations. This is not a suggestion, but a requirement for this task.
+  # --- FINAL SCRIPT STRUCTURE ---
+  # Your final code should strictly follow this template.
+  import pandas as pd
+  import numpy as np
+
+  def calculate_<factor_name>():
+      # 1. Load data
+      df = pd.read_hdf("daily_pv.h5", key="data")
+
+      # 2. Implement the "Reset-Group-Set" pattern for factor calculation
+      #    ... your calculation logic here ...
+      #    The final result of the calculation should be in a DataFrame named `out`.
+
+      # 3. Pre-Save Validation (MANDATORY)
+      assert out.index.is_unique, "Output index is not unique."
+      assert np.isfinite(out.values).all(), "Output contains NaN or Inf values."
+      assert out.columns.tolist() == ["<FactorName>"], "Output column name is incorrect."
+
+      # 4. Save result
+      out.to_hdf("result.h5", key="data", format="table")
+
+  if __name__ == "__main__":
+      calculate_<factor_name>()
 
 qlib_factor_output_format: |-
   Your output should be a pandas dataframe similar to the following example information:
@@ -204,5 +233,3 @@ qlib_model_experiment_setting: |-
   | Dataset 📊 | Model 🤖    | Factors 🌟       | Data Split  🧮                                   |
   |---------|----------|---------------|-------------------------------------------------|
   | CSI300  | RDAgent-dev | 20 factors (Alpha158)  | Train: 2008-01-01 to 2014-12-31 <br> Valid: 2015-01-01 to 2016-12-31 <br> Test  : 2017-01-01 to 2020-08-01 |
-
-  ------The interface you should follow to write the runnable code------
