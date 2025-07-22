@@ -207,3 +207,39 @@ evaluator_final_decision_v1_user: |-
   {{ code_feedback }}
   --------------Factor value feedback:---------------
   {{ value_feedback }}
+
+------The interface you should follow to write the runnable code------
+
+------Crucial Implementation Guideline: Handling Grouped Operations on MultiIndex------
+WARNING: A frequent and critical error occurs when performing grouped rolling calculations. Your full attention is required to avoid this pitfall.
+
+**The Pitfall (The WRONG way):**
+NEVER perform a rolling calculation directly on a grouped object that retains its original MultiIndex, like `df.groupby(level='instrument').rolling(...)`. This specific operation in pandas creates an invalid three-level index (e.g., `('instrument', 'datetime', 'instrument')`) which is difficult to repair and WILL cause a failure.
+
+**The Mandated Solution (The ONLY correct way): The "Reset-Group-Set" Pattern**
+To perform any calculation (especially rolling windows) on a per-instrument basis, you MUST follow this three-step pattern to ensure the index structure is always correct:
+
+1.  **RESET:** First, flatten the MultiIndex into columns. This makes grouping explicit and safe.
+    ```python
+    # Example:
+    df_reset = df.reset_index()
+    ```
+
+2.  **GROUP & CALCULATE:** Now, perform your `groupby()` on the *column* (e.g., 'instrument') and then apply your calculation (e.g., `.rolling()`, `.shift()`, `.cumsum()`). The calculation is now performed on a standard, non-indexed group, which is robust.
+    ```python
+    # Example:
+    # IMPORTANT: Ensure data is sorted for rolling operations to be correct!
+    df_reset.sort_values(by=['instrument', 'datetime'], inplace=True)
+    grouped_calculation = df_reset.groupby('instrument')['$volume'].rolling(window=20).sum()
+    ```
+
+3.  **SET:** After the calculation, merge or assign the results back to your flattened DataFrame. Finally, restore the required `('datetime', 'instrument')` MultiIndex using `set_index()`. This is the final step to guarantee compliance with the output format.
+    ```python
+    # Example:
+    # (After aligning the calculated series back to df_reset)
+    final_df = df_reset.set_index(['datetime', 'instrument'])
+    ```
+
+By strictly adhering to the **"Reset-Group-Set"** pattern, you will prevent all index-related structural errors for grouped operations. This is not a suggestion, but a requirement for this task.
+
+------Crucial Output Format Constraints------
