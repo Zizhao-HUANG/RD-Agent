@@ -60,10 +60,9 @@ check_project_root() {
 
 # 创建临时目录
 create_temp_dir() {
-    TEMP_DIR="/tmp/rdagent_cleanup_$(date +%Y%m%d_%H%M%S)"
-    print_info "创建临时目录: $TEMP_DIR"
-    mkdir -p "$TEMP_DIR"
-    echo "$TEMP_DIR"
+    local temp_dir="/tmp/rdagent_cleanup_$(date +%Y%m%d_%H%M%S)"
+    mkdir -p "$temp_dir"
+    echo "$temp_dir"
 }
 
 # 移动目录到临时位置
@@ -77,20 +76,29 @@ move_directory() {
         if [ "$DRY_RUN" = "true" ]; then
             echo "  [DRY-RUN] 将移动: $source_dir -> $temp_dir/"
         else
+            # 检查目标目录是否存在
+            if [ ! -d "$temp_dir" ]; then
+                print_error "临时目录不存在: $temp_dir"
+                return 1
+            fi
+            
             # 处理权限问题
             if [ ! -w "$source_dir" ]; then
                 print_warning "权限不足，尝试使用sudo移动: $source_dir"
-                sudo mv "$source_dir" "$temp_dir/" 2>/dev/null || {
+                if sudo mv "$source_dir" "$temp_dir/" 2>/dev/null; then
+                    print_success "已移动: $source_dir"
+                else
                     print_error "无法移动 $source_dir，跳过"
                     return 1
-                }
+                fi
             else
-                mv "$source_dir" "$temp_dir/" 2>/dev/null || {
+                if mv "$source_dir" "$temp_dir/" 2>/dev/null; then
+                    print_success "已移动: $source_dir"
+                else
                     print_error "无法移动 $source_dir，跳过"
                     return 1
-                }
+                fi
             fi
-            print_success "已移动: $source_dir"
         fi
     else
         print_info "跳过不存在的目录: $source_dir"
@@ -153,6 +161,7 @@ main_cleanup() {
     
     # 创建临时目录
     TEMP_DIR=$(create_temp_dir)
+    print_info "创建临时目录: $TEMP_DIR"
     
     # 定义要移动的目录
     declare -A dirs_to_move=(
