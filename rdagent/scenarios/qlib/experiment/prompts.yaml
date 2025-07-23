@@ -20,14 +20,13 @@ qlib_factor_background: |-
   - **Incorrect**: A generic `Momentum` factor with a `window` argument. `Momentum_10d` and `Momentum_20d` must be implemented as two separate, distinct factors.
 
 qlib_factor_interface: |-
-  # CONTEXT: You are an expert Python developer creating a Qlib-compatible factor calculation script.
-  # OBJECTIVE: Generate a standalone Python script to calculate a single financial factor.
+  # CONTEXT: You are an expert Python developer specializing in high-performance financial data analysis with pandas, creating a Qlib-compatible factor calculation script.
+  # OBJECTIVE: Generate a standalone, highly efficient, and numerically robust Python script to calculate a single financial factor.
 
-  # --- RULES ---
-  - The script must be directly executable: `python <file_name>.py`
-  - It must contain a single public function: `calculate_<factor_name>()`.
-  - Use a standard main guard: `if __name__ == "__main__":`.
-  - Do NOT use `try/except` blocks.
+  # --- HARD RULES ---
+  # Adherence to these rules is mandatory. Violation will result in failure.
+  # 1. NO MASKING NUMERICAL ISSUES: It is strictly forbidden to use `.fillna()`, `.replace()`, or any other method to fill/replace `NaN` or `inf` values *after* a calculation. All numerical issues must be addressed at the source of the calculation (e.g., using `np.divide` for safe division, or adding a small epsilon to a denominator).
+  # 2. AVOID SLOW OPERATIONS: The use of `.apply()` is strongly discouraged due to poor performance. It is only permissible if a vectorized alternative is impossible or demonstrably slower. If used, a comment `# PERF_REASON: ...` explaining the justification is mandatory.
 
   # --- I/O SPECIFICATION ---
   - **Input**: Load data from `daily_pv.h5` using `pd.read_hdf("daily_pv.h5", key="data")`.
@@ -36,33 +35,45 @@ qlib_factor_interface: |-
     - **Index**: A `MultiIndex` of `("datetime", "instrument")`.
     - **Columns**: A single column named `<FactorName>`.
     - **Dtype**: `float`.
-    - **Values**: Must not contain any `NaN` or `inf` values.
+    - **Values**: Must not contain any `NaN` or `inf` values, achieved through robust calculation, not post-hoc cleaning.
 
   # --- CORE LOGIC: The "Reset-Group-Set" Pattern ---
-  # This pattern is MANDATORY for any grouped rolling/shifting operations to avoid index alignment errors.
+  # This pattern is MANDATORY for any grouped operations (time-series or cross-sectional).
 
-  # 1. RESET: Flatten the MultiIndex to work with regular columns.
+  # 1. RESET: Flatten the MultiIndex.
   df_reset = df.reset_index()
-  df_reset.sort_values(["instrument", "datetime"], inplace=True) # Crucial for time-series ops
+  df_reset.sort_values(["instrument", "datetime"], inplace=True) # Default sort for time-series
 
   # 2. GROUP & CALCULATE: Perform calculations on the flattened DataFrame.
-  #    Use `.transform()` to ensure the output Series has a matching index.
-  #    Example for a 20-day rolling sum of volume:
-  df_reset["factor_value"] = (
-      df_reset.groupby("instrument")["$volume"]
-              .transform(lambda s: s.rolling(20).sum())
-  )
-  # WARNING: NEVER do `df.groupby(...).rolling(...)` directly. It creates an incompatible index.
+  #    ... your calculation logic here ...
 
-  # 3. SET: Restore the MultiIndex and rename the column for the final output.
+  # 3. SET: Restore the MultiIndex for the final output.
   out = (
       df_reset[["datetime", "instrument", "factor_value"]]
       .set_index(["datetime", "instrument"])
       .rename(columns={"factor_value": "<FactorName>"})
   )
 
+  # --- PERFORMANCE BEST PRACTICES & EXAMPLES ---
+  # Use these vectorized techniques.
+
+  # EXAMPLE 1: Time-Series Rolling Operation (Group by instrument)
+  df_reset["rolling_sum_vol"] = (
+      df_reset.groupby("instrument")["$volume"]
+              .transform(lambda s: s.rolling(20, min_periods=20).sum())
+  )
+
+  # EXAMPLE 2: Vectorized Rolling Weighted Average (Time-Series)
+  grouped_s = df_reset.groupby("instrument")["$close"]
+  s_t0 = grouped_s.transform(lambda s: s)
+  s_t1 = grouped_s.transform(lambda s: s.shift(1))
+  df_reset["weighted_avg"] = 0.5 * s_t0 + 0.5 * s_t1
+
+  # EXAMPLE 3: Cross-Sectional Operation (Group by datetime)
+  # For factors comparing stocks at the same time (e.g., ranking), group by `datetime`.
+  df_reset["rank_pct"] = df_reset.groupby("datetime")["$close"].rank(pct=True)
+
   # --- FINAL SCRIPT STRUCTURE ---
-  # Your final code should strictly follow this template.
   import pandas as pd
   import numpy as np
 
@@ -70,14 +81,23 @@ qlib_factor_interface: |-
       # 1. Load data
       df = pd.read_hdf("daily_pv.h5", key="data")
 
-      # 2. Implement the "Reset-Group-Set" pattern for factor calculation
+      # 2. Implement the "Reset-Group-Set" pattern using high-performance, vectorized logic.
       #    ... your calculation logic here ...
       #    The final result of the calculation should be in a DataFrame named `out`.
 
-      # 3. Pre-Save Validation (MANDATORY)
+      # 3. ENHANCED Pre-Save Validation (MANDATORY)
+      # Basic checks
       assert out.index.is_unique, "Output index is not unique."
-      assert np.isfinite(out.values).all(), "Output contains NaN or Inf values."
       assert out.columns.tolist() == ["<FactorName>"], "Output column name is incorrect."
+      
+      # Numerical robustness checks
+      assert np.isfinite(out.values).all(), "Output contains NaN or Inf values. This must be fixed in the calculation logic, not by using .fillna()/.replace()."
+      
+      # Distributional sanity checks
+      factor_series = out.iloc[:, 0]
+      assert factor_series.isnull().sum() == 0, "Output contains NaN values, which is prohibited."
+      assert factor_series.std() > 1e-6, f"Factor has near-zero variance ({factor_series.std():.2e}), suggesting it might be a constant or flawed."
+      assert abs(factor_series.skew()) < 10, f"Factor distribution is extremely skewed ({factor_series.skew():.2f}). This is often an error, **unless the factor is INTENTIONALLY DESIGNED to capture rare, extreme events.**"
 
       # 4. Save result
       out.to_hdf("result.h5", key="data", format="table")

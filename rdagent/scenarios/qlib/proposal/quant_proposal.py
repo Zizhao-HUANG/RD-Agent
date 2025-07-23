@@ -160,7 +160,7 @@ class QlibQuantHypothesisGen(FactorAndModelHypothesisGen):
             # Count the number of previous model experiments to guide the phased strategy
             num_model_experiments = sum(1 for exp, _ in trace.hist if exp.hypothesis.action == "model")
 
-            if num_model_experiments < 5:
+            if num_model_experiments < 15:
                 # Phase 1: Focus on foundational time-series properties.
                 qaunt_rag = """
                 **Phase 1: Foundational Modeling.**
@@ -168,7 +168,7 @@ class QlibQuantHypothesisGen(FactorAndModelHypothesisGen):
                 - **Strategic Direction:** Focus on architectures designed for **sequential data processing**. These models are adept at capturing local temporal dependencies (like momentum) and are essential for confirming that basic patterns can be learned before attempting more complex structures.
                 - **Goal:** Achieve a solid, difficult-to-beat baseline. Fine-tuning hyperparameters on these foundational architectures is a key strategy here.
                 """
-            elif num_model_experiments < 25:
+            elif num_model_experiments < 35:
                 # Phase 2: Explore more complex, long-range patterns.
                 qaunt_rag = """
                 **Phase 2: Advanced Pattern Recognition.**

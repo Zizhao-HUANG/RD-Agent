@@ -23,8 +23,12 @@ hypothesis_and_feedback: |-
 last_hypothesis_and_feedback: |-
   ## Hypothesis
   {{ experiment.hypothesis }}
-  ## Specific Task
-  {% for task in experiment.sub_tasks %}{% if task is not none and task.get_task_brief_information is defined %}{{ task.get_task_brief_information() }}{% endif %}{% endfor %}
+  ## Specific Task:
+  {% for task in experiment.sub_tasks %}
+  {% if task is not none and task.get_task_brief_information is defined %}
+  {{ task.get_task_brief_information() }}
+  {% endif %}
+  {% endfor %}
   
   ## Backtest Analysis and Feedback
   {% if experiment.result is not none %}
@@ -32,10 +36,9 @@ last_hypothesis_and_feedback: |-
   {% endif %}
 
   **Training Log Analysis Mandate:**
-  **You MUST scrutinize the following training log.** Your primary task is to identify signs of overfitting (e.g., large gap between training/validation loss), underfitting (e.g., loss plateaus at a high value), or training instability (e.g., spiky loss curves). Your new hypothesis in the next step **MUST** explicitly state how it addresses any problems found here.
-  ```
-  {{ experiment.stdout }} 
-  ```
+  You MUST scrutinize the following training log. Your primary task is to identify signs of overfitting (e.g., large gap between training/validation loss), underfitting (e.g., loss plateaus at a high value), or training instability (e.g., spiky loss curves). Your new hypothesis in the next step MUST explicitly state how it addresses any problems found here.
+  Training Log:
+  {{ experiment.stdout }}
 
   **Previous Agent's Analysis:**
   Observation: {{ feedback.observations }}
@@ -77,11 +80,11 @@ factor_hypothesis_output_format: |-
   }
 
 hypothesis_output_format_with_action: |-
-  Please generate the output using the following format and specifications. You MUST strictly adhere to the JSON schema provided.
+  Please generate the output using the following format and specifications. You MUST strictly adhere to the **single JSON object** format provided.
   {
   "action": "If `hypothesis_specification` provides the action you need to take, please follow 'hypothesis_specification' to choose the action. Otherwise, based on previous experimental results, suggest the action you believe is most appropriate at the moment. It MUST be one of [`factor`, `model`].",
-  "hypothesis": "A detailed proposal for the new idea. **This value MUST be a single string.** Your role is to act as the **Synthesis Unit**, creating a **high-level conceptual blueprint**. A separate agent will ask for implementation details like code or mathematical formulas in a later step. Your job at this stage is to describe the *'what'* and the *'why'*, not the *'how'*. \n\n- **When proposing a `factor`:** Your blueprint must be a pure description. It should describe the factor's name and the economic or market intuition it aims to capture. For example: 'A factor that measures market sentiment by analyzing the ratio of advancing stocks to declining stocks.' Do not provide the calculation formula.\n\n- **When proposing a `model`:** Your blueprint must be a structured, natural language description of the model's name, type, architecture, and key conceptual hyperparameters. For example: 'A deep Transformer model with 12 layers and a high dropout rate of 0.4 to capture long-term dependencies.'\n\n**CRITICAL RULE FOR BOTH:** You **MUST NOT** output any implementation details. This includes Python code, YAML configurations, and specific mathematical formulas. Your entire output for this field must be descriptive natural language.",
-  "reason": "Provide a detailed, multi-sentence justification. Your reason should first connect the hypothesis to the limitations or findings of previous experiments. Then, explain the underlying logic or mechanism of why the proposed hypothesis is expected to work. Finally, state the specific improvement you anticipate (e.g., improved accuracy, better ranking performance, or a more robust factor)."
+  "hypothesis": "A detailed proposal for the new idea. **This value MUST be a single string.** Your role is to act as a **First Principles Thinker**, generating a **core, inspirational insight** that will guide the creation of new factors or models. Your job is to describe the *'why'* at a philosophical level, not the *'what'* at a technical level. \n\n- **When proposing a `factor` hypothesis:** **DO NOT propose specific, named factors or their calculations.** Instead, propose a **fundamental, high-level hypothesis** inspired by a core concept from another domain (e.g., physics, psychology, sociology, economics, philosophy). Your hypothesis should be a conceptual statement about how markets work, acting as a **source of inspiration** for a downstream agent who will later translate it into concrete factors. For example: 'Hypothesis from Physics: Markets, like physical systems, exhibit inertia. A trend in motion will stay in motion until an external force acts upon it. Therefore, our next strategy should focus on identifying and measuring the 'market inertia' to predict trend persistence.'\n\n- **When proposing a `model` hypothesis:** Your blueprint must be a structured, natural language description of the model's name, type, and core conceptual architecture. For example: 'A deep Transformer model with 12 layers and a high dropout rate of 0.4 to capture long-term dependencies.'\n\n**CRITICAL RULE FOR FACTORS:** You **MUST NOT** output any specific factor descriptions, implementation details, Python code, YAML configurations, or mathematical formulas. Your entire output for this field must be a high-level, conceptual, and inspirational statement.",
+  "reason": "Provide a detailed, multi-sentence justification for the overall hypothesis. Your reason should connect this **conceptual approach** to the limitations or findings of previous experiments. Then, explain the rationale for choosing this analogy or principle as a promising lens through which to view market behavior at this stage. Finally, state the new type of insight you anticipate this approach will unlock."
   }
 
 model_hypothesis_specification: |-
@@ -223,7 +226,7 @@ factor_hypothesis_specification: |-
   *   **Implementation Feasibility:** While you focus on the concept, it must be grounded in what is possible. All proposed factor concepts MUST be translatable into `qlib`'s operator language using the available data: `$open`, `$high`, `$low`, `$close`, `$volume`, and `$factor`.
   *   **SOTA Awareness:** The SOTA (State-of-the-Art) factor library is automatically updated with successful factors from previous trials. **Do not re-propose factors that have already succeeded.** Your goal is to find *new* sources of alpha that can improve upon the current SOTA.
   *   **Iterative Strategy:** Analyze the feedback from previous trials. If a conceptual direction (e.g., Volatility) is showing promise, propose refinements or variations. If a direction is consistently failing, pivot to a different, unexplored category from your toolkit or invent a new one.
-  *   **Generation Quota:** Propose 3 distinct, well-reasoned factor hypotheses in each response. Focus on quality and novelty over quantity.
+  *   **Generation Quota:** Propose 1-3 distinct, well-reasoned factor hypotheses in each response. Focus on quality and novelty over quantity.
 
   Now, based on the provided history and feedback, generate your next set of hypotheses.
 
