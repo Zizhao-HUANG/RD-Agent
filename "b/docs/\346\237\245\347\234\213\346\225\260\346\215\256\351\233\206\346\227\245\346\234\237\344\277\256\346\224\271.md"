@@ -1,0 +1,68 @@
+# 数据集日期范围查看与修改指南
+
+本文档将手把手演示如何在 RD-Agent 项目中查看当前实验所使用的数据集时间区间，以及如何将这些时间区间替换为自定义的日期。
+
+## 1. 找到配置文件
+
+RD-Agent 使用的训练、验证和测试集日期均写在 `rdagent/scenarios/qlib/experiment` 目录下的模板配置文件中，常见的有：
+
+- `model_template/conf_baseline_factors_model.yaml`
+- `model_template/conf_sota_factors_model.yaml`
+- `factor_template/conf_baseline.yaml`
+
+以 `model_template/conf_baseline_factors_model.yaml` 为例，数据起止日期在文件开头的 `data_handler_config` 中定义：
+
+```yaml
+start_time: 2008-01-01
+end_time: 2020-08-01
+fit_start_time: 2008-01-01
+fit_end_time: 2014-12-31
+```
+
+训练集、验证集和测试集的切分位于同一文件稍后的 `segments` 字段：
+
+```yaml
+segments:
+    train: [2008-01-01, 2014-12-31]
+    valid: [2015-01-01, 2016-12-31]
+    test:  [2017-01-01, 2020-08-01]
+```
+
+对应的行号可在仓库中查看，例如：
+
+```bash
+nl -ba rdagent/scenarios/qlib/experiment/model_template/conf_baseline_factors_model.yaml | sed -n '1,20p'
+```
+
+## 2. 查看当前日期范围
+
+执行以下命令即可打印出当前配置的日期：
+
+```bash
+grep -n "segments" -n rdagent/scenarios/qlib/experiment/model_template/conf_baseline_factors_model.yaml -A3
+```
+
+输出示例（节选）：
+
+```text
+80              segments:
+81                  train: [2008-01-01, 2014-12-31]
+82                  valid: [2015-01-01, 2016-12-31]
+83                  test: [2017-01-01, 2020-08-01]
+```
+
+## 3. 修改为自定义日期
+
+1. 打开对应的 YAML 文件，例如：
+   ```bash
+   nano rdagent/scenarios/qlib/experiment/model_template/conf_baseline_factors_model.yaml
+   ```
+2. 将上述 `start_time`、`end_time` 以及 `segments` 中的日期替换为希望使用的新日期区间。
+3. 保存并退出编辑器。
+
+若同时使用其他模板（例如 `conf_sota_factors_model.yaml`、`factor_template/conf_baseline.yaml` 等），按照相同方式修改即可。
+
+## 4. 重新运行实验
+
+日期调整后，执行原有的训练或回测命令（如 `qrun conf.yaml`）即可在新的时间范围上重新构建数据集并运行实验。
+
