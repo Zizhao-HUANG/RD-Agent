@@ -142,9 +142,32 @@ class QlibQuantHypothesisGen(FactorAndModelHypothesisGen):
             else:
                 qaunt_rag = f"""
                 **Phase 5: Unrestricted Deep Dive (Round {num_factor_experiments - 19}).**
-                **Goal:** Synthesize all learnings and achieve a breakthrough in alpha discovery.
-                - **Your Task:** The structured research phases are complete. You now have full creative freedom. Deeply analyze the entire experimental history, identify the most promising alpha directions, and formulate your boldest hypotheses.
-                - **Constraint:** **There are no restrictions.** You can propose complex hybrids, invent new factor categories, or design features specifically for advanced models. Your objective is to find the next State-of-the-Art alpha.
+                **Goal:** Synthesize all learnings and achieve a breakthrough in alpha discovery by thinking from first principles.
+                - **Your Task:** The structured research phases are complete. You now have full creative freedom. Deeply analyze the entire experimental history to understand what has worked and what has failed. Then, step back and formulate your boldest hypotheses by drawing inspiration from fundamental disciplines.
+                - **Constraint:** **There are no restrictions.** Your objective is to invent the next State-of-the-Art alpha by proposing a novel, core insight about market behavior.
+
+                ---
+                ### **Cross-Disciplinary Inspiration Library**
+                To spark a breakthrough, frame market behavior through the lens of another fundamental discipline. Use these mental models to generate entirely new hypotheses about *how markets truly work*.
+
+                **Systems & Physics-Based Models:**
+                *   **Complex Systems Science:** How do simple, local interactions between traders lead to complex, emergent market-wide phenomena (like crashes or bubbles)? Where are the tipping points?
+                *   **Fluid Dynamics:** Can we view order flow and liquidity as a fluid? Where do we see smooth "laminar flow" (trends) versus chaotic "turbulence" (volatility)?
+                *   **Information Theory:** What is the true signal-to-noise ratio of price movements? How can we measure the flow of information, its entropy, and its distortion within the market?
+
+                **Human & Collective Behavior Models:**
+                *   **Cognitive & Behavioral Psychology:** How do systemic, non-rational human biases (like loss aversion, herd instinct, or recency bias) manifest as predictable inefficiencies at a market scale?
+                *   **Social Network Theory:** How does information, influence, and sentiment propagate through the network of investors? Can we identify the key nodes and the speed of diffusion?
+                *   **Neuroscience:** Does the market as a whole exhibit cognitive functions like "attention" (focus on specific narratives) or "memory" (long-term price patterns)? How do these collective functions shift?
+                *   **Epidemiology:** How do investment ideas and narratives spread like a virus? Can we model their "contagion rate" and identify them in their "incubation period" before they become mainstream?
+
+                **Strategy & Evolution Models:**
+                *   **Ecology & Evolutionary Dynamics:** If trading strategies are "species" competing for the "resource" of alpha, how does this ecosystem evolve? How can we measure a strategy's "crowdedness" or "niche"?
+                *   **Game Theory:** What strategic "game" are market participants currently playing? How are they anticipating each other's moves, especially in situations involving liquidity or information asymmetry?
+
+                **Meta-Level & Structural Models:**
+                *   **Linguistics:** Is there a "grammar" to price action? Can we interpret sequences of price patterns as a language with its own syntax, predicting the next "word" or "phrase"?
+                *   **Philosophy:** What is a core, unexamined assumption we hold about markets (e.g., about efficiency, rationality, or value)? What new hypothesis emerges if we challenge it directly?
                 """
             # ==================================================================
             # END: REVISED FACTOR RAG LOGIC
