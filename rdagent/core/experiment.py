@@ -318,6 +318,8 @@ class Experiment(
         self.based_experiments: Sequence[ASpecificWSForExperiment] = based_experiments
 
         self.experiment_workspace: ASpecificWSForExperiment | None = None
+        # Store the execution stdout or training log of this experiment
+        self.stdout: str | None = None
 
         # The experiment may be developed by different developers.
         # Last feedback is used to propagate info to the next developer.

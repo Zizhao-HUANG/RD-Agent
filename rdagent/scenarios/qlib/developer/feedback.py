@@ -12,6 +12,20 @@ from rdagent.scenarios.qlib.experiment.quant_experiment import QlibQuantScenario
 from rdagent.utils import convert2bool
 from rdagent.utils.agent.tpl import T
 
+
+def analyze_training_log(log: str) -> str:
+    """Simple heuristic analysis of training log."""
+    if not log:
+        return "No training log available."
+    llog = log.lower()
+    if "overfit" in llog or "over-fitting" in llog:
+        return "Signs of overfitting detected in training log."
+    if "underfit" in llog or "under-fitting" in llog:
+        return "Signs of underfitting detected in training log."
+    if "nan" in llog or "error" in llog:
+        return "Training instability or errors detected."
+    return "Training log appears normal."
+
 DIRNAME = Path(__file__).absolute().resolve().parent
 
 IMPORTANT_METRICS = [
@@ -156,7 +170,7 @@ class QlibModelExperiment2Feedback(Experiment2Feedback):
             exp_result=exp.result.loc[IMPORTANT_METRICS] if exp.result is not None else "execution failed",
         )
 
-        # Call the APIBackend to generate the response for hypothesis feedback
+        # Query the language model for feedback
         response = APIBackend().build_messages_and_create_chat_completion(
             user_prompt=user_prompt,
             system_prompt=sys_prompt,
@@ -164,23 +178,16 @@ class QlibModelExperiment2Feedback(Experiment2Feedback):
             json_target_type=Dict[str, str | bool | int],
         )
 
-        # Parse the JSON response to extract the feedback
-        response_json_hypothesis = json.loads(response)
+        response_json = json.loads(response)
+        observations = response_json.get("Observations", "")
+        # Prepend simple log analysis result
+        log_obs = analyze_training_log(exp.stdout or "")
+        observations = f"{log_obs} {observations}".strip()
 
-        # Call the APIBackend to generate the response for hypothesis feedback
-        response_hypothesis = APIBackend().build_messages_and_create_chat_completion(
-            user_prompt=user_prompt,
-            system_prompt=sys_prompt,
-            json_mode=True,
-            json_target_type=Dict[str, str | bool | int],
-        )
-
-        # Parse the JSON response to extract the feedback
-        response_json_hypothesis = json.loads(response_hypothesis)
         return HypothesisFeedback(
-            observations=response_json_hypothesis.get("Observations", "No observations provided"),
-            hypothesis_evaluation=response_json_hypothesis.get("Feedback for Hypothesis", "No feedback provided"),
-            new_hypothesis=response_json_hypothesis.get("New Hypothesis", "No new hypothesis provided"),
-            reason=response_json_hypothesis.get("Reasoning", "No reasoning provided"),
-            decision=convert2bool(response_json_hypothesis.get("Decision", "false")),
+            observations=observations or "No observations provided",
+            hypothesis_evaluation=response_json.get("Feedback for Hypothesis", "No feedback provided"),
+            new_hypothesis=response_json.get("New Hypothesis", "No new hypothesis provided"),
+            reason=response_json.get("Reasoning", "No reasoning provided"),
+            decision=convert2bool(response_json.get("Decision", "false")),
         )
