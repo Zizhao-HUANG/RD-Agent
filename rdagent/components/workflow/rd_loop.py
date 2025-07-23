@@ -88,5 +88,7 @@ class RDLoop(LoopBase, metaclass=LoopMeta):
             logger.log_object(feedback, tag="feedback")
             self.trace.hist.append((prev_out["running"], feedback))
 
+        return feedback
+
     # TODO: `def record(self, prev_out: dict[str, Any]):` has already been hard coded into LoopBase
     # So we should add it into RDLoop class to make sure every RDLoop Sub Class be aware of it.
