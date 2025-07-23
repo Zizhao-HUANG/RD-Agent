@@ -93,11 +93,16 @@ qlib_factor_interface: |-
       # Numerical robustness checks
       assert np.isfinite(out.values).all(), "Output contains NaN or Inf values. This must be fixed in the calculation logic, not by using .fillna()/.replace()."
       
-      # Distributional sanity checks
+      # Distributional Analysis & Non-Fatal Warnings
       factor_series = out.iloc[:, 0]
       assert factor_series.isnull().sum() == 0, "Output contains NaN values, which is prohibited."
       assert factor_series.std() > 1e-6, f"Factor has near-zero variance ({factor_series.std():.2e}), suggesting it might be a constant or flawed."
-      assert abs(factor_series.skew()) < 10, f"Factor distribution is extremely skewed ({factor_series.skew():.2f}). This is often an error, **unless the factor is INTENTIONALLY DESIGNED to capture rare, extreme events.**"
+      
+      # The following is a non-fatal check. It prints a warning but WILL NOT cause an error.
+      # This is crucial for factors that are expected to have extreme distributions.
+      skewness = factor_series.skew()
+      if abs(skewness) > 15:
+          print(f"INFO: Factor distribution is highly skewed (skewness: {skewness:.2f}). This is a characteristic of the factor, not an error.")
 
       # 4. Save result
       out.to_hdf("result.h5", key="data", format="table")

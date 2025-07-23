@@ -83,7 +83,7 @@ hypothesis_output_format_with_action: |-
   Please generate the output using the following format and specifications. You MUST strictly adhere to the **single JSON object** format provided.
   {
   "action": "If `hypothesis_specification` provides the action you need to take, please follow 'hypothesis_specification' to choose the action. Otherwise, based on previous experimental results, suggest the action you believe is most appropriate at the moment. It MUST be one of [`factor`, `model`].",
-  "hypothesis": "A detailed proposal for the new idea. **This value MUST be a single string.** Your role is to act as a **First Principles Thinker**, generating a **core, inspirational insight** that will guide the creation of new factors or models. Your job is to describe the *'why'* at a philosophical level, not the *'what'* at a technical level. \n\n- **When proposing a `factor` hypothesis:** **DO NOT propose specific, named factors or their calculations.** Instead, propose a **fundamental, high-level hypothesis** inspired by a core concept from another domain (e.g., physics, psychology, sociology, economics, philosophy). Your hypothesis should be a conceptual statement about how markets work, acting as a **source of inspiration** for a downstream agent who will later translate it into concrete factors. For example: 'Hypothesis from Physics: Markets, like physical systems, exhibit inertia. A trend in motion will stay in motion until an external force acts upon it. Therefore, our next strategy should focus on identifying and measuring the 'market inertia' to predict trend persistence.'\n\n- **When proposing a `model` hypothesis:** Your blueprint must be a structured, natural language description of the model's name, type, and core conceptual architecture. For example: 'A deep Transformer model with 12 layers and a high dropout rate of 0.4 to capture long-term dependencies.'\n\n**CRITICAL RULE FOR FACTORS:** You **MUST NOT** output any specific factor descriptions, implementation details, Python code, YAML configurations, or mathematical formulas. Your entire output for this field must be a high-level, conceptual, and inspirational statement.",
+  "hypothesis": "A detailed proposal for the new idea. **This value MUST be a single string.** Your role is to act as a **First Principles Thinker**, generating a **core, inspirational insight** that will guide the creation of new factors or models. Your job is to describe the *'why'* at a philosophical level, not the *'what'* at a technical level. \n\n- **When proposing a `factor` hypothesis:** **DO NOT propose specific, named factors or their calculations.** Instead, propose a **fundamental, high-level hypothesis** inspired by a core concept from another domain. Your hypothesis should be a conceptual statement about how markets work, acting as a **source of inspiration** for a downstream agent who will later translate it into concrete factors. \n\n- **When proposing a `model` hypothesis:** Your blueprint must be a structured, natural language description of the model's name, type, and core conceptual architecture. For example: 'A deep Transformer model with 12 layers and a high dropout rate of 0.4 to capture long-term dependencies.'\n\n**CRITICAL RULE FOR FACTORS:** You **MUST NOT** output any specific factor descriptions, implementation details, Python code, YAML configurations, or mathematical formulas. Your entire output for this field must be a high-level, conceptual, and inspirational statement.",
   "reason": "Provide a detailed, multi-sentence justification for the overall hypothesis. Your reason should connect this **conceptual approach** to the limitations or findings of previous experiments. Then, explain the rationale for choosing this analogy or principle as a promising lens through which to view market behavior at this stage. Finally, state the new type of insight you anticipate this approach will unlock."
   }
 
@@ -94,7 +94,31 @@ model_hypothesis_specification: |-
   * `historical_archive`: The complete log of all past hypotheses and their outcomes (successes and failures). This is your long-term memory.
 
   **Hardware Context & Ambition Mandate:** Your operating environment is equipped with an **NVIDIA Blackwell B200 (192 GB HBM3e VRAM)** and **384 GB system RAM**. This powerful hardware is not a constraint but an asset to be fully exploited. Therefore, when proposing hypotheses for advanced models, you are encouraged to be ambitious with parameters such as `d_model`, `num_layers`, and `num_timesteps`. Configurations that utilize a significant portion of the 192GB VRAM are not only feasible but highly encouraged for exploring the upper limits of model performance. Do not shy away from proposing large-scale models that would be intractable on lesser hardware.
-  **Justification Requirement:** For each proposed model, provide a back-of-the-envelope calculation of its estimated VRAM usage during training. Clearly state your assumptions regarding batch size, sequence length, data precision (e.g., BF16), and the chosen optimizer (e.g., AdamW). Explain why your proposed architecture is well-suited for the financial forecasting task.
+  
+  **Justification Requirement:** For each proposed model, provide the following.
+
+  **1. Architectural Rationale:**
+    *   Briefly explain why this architecture is a logical next step, referencing past results.
+    *   State your initial `batch_size` assumption. For new architectures, always start conservatively (e.g., 16-128) to establish a baseline.
+
+  **2. VRAM Estimation (Mandatory):**
+    *   Your VRAM calculation must be tailored to the specific architecture you propose. The following methods are **illustrative examples** to guide your reasoning, not a restrictive list. **You are free to propose any model from your architectural toolbox.**
+    *   Assume BF16 precision and AdamW optimizer unless specified otherwise.
+
+    **Example 1: Benchmark-based Scaling (Good for Transformers, e.g., `pytorch_transformer_ts`)**
+      *   Uses a similar completed experiment from `historical_archive` as a reference.
+      *   **Static VRAM (GB):** `(P * 12) / 1024`, where `P` is param count in millions.
+      *   **Dynamic VRAM:** Scale the benchmark's dynamic VRAM by the workload ratio: `(B * L * D * layers)_new / (B * L * D * layers)_bench`. (B: batch_size, L: num_timesteps, D: d_model).
+      *   **Total:** `(Static_VRAM + Dynamic_VRAM) * 1.1` (10% safety margin).
+
+    **Example 2: Peak-Tensor Analysis (Good for TCNs, e.g., `pytorch_tcn_ts`)**
+      *   Crucial for models with large internal memory spikes (e.g., from large dilations/padding).
+      *   **Peak Tensor VRAM (GB):** `(B * C * (L + padding) * 2) / 1024^3`, where `C` is channels/d_model and `padding = (kernel_size - 1) * max_dilation`.
+      *   **Total VRAM:** `Peak_Tensor_VRAM * 9`. (This `x9` is an empirical multiplier for deep TCNs, accounting for full graph overhead).
+
+    **For Other Architectures (e.g., `pytorch_tabnet`, `pytorch_sfm`, `double_ensemble`):**
+      *   If a precise calculation is not feasible, provide a qualitative assessment of the expected VRAM usage (e.g., "low," "medium," "high").
+      *   If consumption is unknown and potentially high, explicitly propose an initial "profiling run" with a minimal `batch_size` (e.g., 16-32) to establish a VRAM baseline.
 
   **System Context: Your Role and Available Tools**
 
@@ -187,6 +211,7 @@ model_hypothesis_specification: |-
         * **B. Rationale:** A 2-3 sentence justification explaining *why* this hypothesis is being proposed, explicitly referencing evidence from past experiments and naming the chosen model (e.g., "The previous `pytorch_lstm_ts` showed decaying performance on longer sequences. By pivoting to a `pytorch_tcn_ts`, we hypothesize the model can better capture long-term dependencies via its larger receptive field, improving long-term dependency modeling.").
         * **C. Architectural Specification:** A clear, step-by-step description of the model's structure, parameters, and forward pass logic, sufficient for the Implementation Unit to translate it directly into PyTorch code. Be specific about layer dimensions, activation functions, and the flow of data.
 
+
 factor_hypothesis_specification: |-
   **You are the "Synthesis Unit" of the RD-Agent(Q) framework, acting as our Chief Scientist and Idea Generator.** Your mission is to analyze the history of experimental trials and generate conceptually innovative factor hypotheses. Your goal is to break new ground, moving beyond incremental tweaks and discovering novel sources of alpha.
 
@@ -254,12 +279,25 @@ factor_experiment_output_format: |-
 
 model_experiment_output_format: |-
   You must design **exactly one model** to test the hypothesis.
-  The output must be a JSON object adhering to the following schema. Your response should contain ONLY the JSON object.
+  Your response must be a single, valid JSON object and nothing else.
+
+  **CRITICAL INSTRUCTIONS FOR VRAM-AWARE HYPERPARAMETER TUNING:**
+  1.  **Context Reminder:** The target hardware is an **NVIDIA B200 with 192 GB of VRAM**. Your `batch_size` and model complexity should be set with this capacity in mind.
+  2.  Before setting the `training_hyperparameters`, you **MUST** perform a VRAM estimation based on the model's architecture.
+  3.  The `vram_estimation_and_justification` field is not just a report; it is where you must **document your reasoning for choosing the model's scale**. This process should guide your final parameter selection.
+  4.  Use the result of your estimation to set a reasonable `batch_size`. If your model is large or its VRAM usage is uncertain, start with a conservative `batch_size` (e.g., 32, 64, or lower).
+  5.  The VRAM calculation method must be tailored to the architecture. The following are illustrative examples:
+      *   **Example 1: Benchmark-based Scaling (Good for Transformers):** Use a similar completed experiment from `historical_archive` as a reference. Scale its dynamic VRAM based on the workload ratio `(B * L * D * layers)`.
+      *   **Example 2: Peak-Tensor Analysis (Good for TCNs):** Calculate the VRAM for the largest padded intermediate tensor: `V_peak = (B * C * (L + padding) * 2) / 1024^3`. The total VRAM is a multiple of this (e.g., `V_peak * 9`).
+      *   **For Other Architectures:** If a precise calculation is not feasible, provide a qualitative assessment and justify a "profiling run" with a minimal `batch_size` (e.g., 16).
+
+  **JSON OUTPUT SCHEMA:**
   {
     "model_name (The name of the model)": {
-        "description": "A detailed description of the model, linking it back to the parent hypothesis.",
+        "design_rationale_and_vram_estimation": "YOUR STRATEGIC RATIONALE AND VRAM ESTIMATION FOR THE PROPOSED MODEL SCALE GOES HERE. Define this *before* setting the hyperparameters below. Justify why the chosen scale (e.g., hidden_size, num_layers) is appropriate.",
+        "description": "A detailed description of the model, linking it back to the parent hypothesis and the design rationale above.",
         "formulation": "A LaTeX formula representing the model's core mathematical operation.",
-        "architecture": "A detailed, layer-by-layer description of the model's architecture (e.g., neural network layers, tree structures). This must be specific enough for direct translation into code.",
+        "architecture": "An extremely detailed, layer-by-layer description of the model's architecture (e.g., neural network layers, tree structures). This must be specific enough for direct translation into code.",
         "variables": {
             "\\hat{y}_u": "The predicted output for node u",
             "variable_name_2": "Description of variable 2"
@@ -269,7 +307,6 @@ model_experiment_output_format: |-
             "hyperparameter_name_2": "value of hyperparameter 2"
         },
         "training_hyperparameters": {
-            "# CRITICAL: The values below are generic baselines. You MUST critically evaluate and adjust them based on the proposed model's complexity and the analysis of previous training logs. For example, a larger model may require a smaller learning rate or more epochs.": "",
             "n_epochs": "100",
             "lr": "5e-5",
             "early_stop": 10,
