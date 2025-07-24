@@ -391,9 +391,9 @@ model_experiment_output_format: |-
             "hidden_units": "e.g., [64]. A list of output feature dimensions for each GAT layer."
         },
         "training_hyperparameters": {
-            "n_epochs": 200,
+            "n_epochs": 100,
             "lr": "1e-4",
-            "early_stop": 50,
+            "early_stop": 10,
             "batch_size": 1024,
             "weight_decay": "1e-4",
             "precision": "mixed_float16",
