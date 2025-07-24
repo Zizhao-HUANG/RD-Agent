@@ -220,10 +220,21 @@ qlib_model_background: |-
   **CRUCIAL RULE**: The model architecture must be fully defined with static hyperparameters. Do not create a generic model class that requires hyperparameter tuning later.
 
 qlib_model_interface: |-
-  You must generate a single Python script that defines a PyTorch model. The script must strictly follow the template below.
+  You must generate a single Python script that defines a PyTorch model.
 
-  **--- CRUCIAL REQUIREMENT ---**
-  The model's `__init__` method **MUST** accept `num_features` as the argument for the number of input features. The system will use this exact parameter name (`num_features`) during instantiation. **DO NOT use `d_feat` or any other name.**
+  ---
+  **MANDATORY UNIVERSAL INTERFACE RULE (APPLIES TO ALL MODELS):**
+
+  The model's `__init__` method **MUST** accept both `num_features` and `num_timesteps` as arguments. This is a **strict requirement** from the execution environment.
+
+  - `def __init__(self, num_features: int, num_timesteps: int = None):`
+
+  **Reason:** The system will always call the model using `model_cls(num_features=..., num_timesteps=...)`. Even if your model's architecture does not use `num_timesteps`, its `__init__` signature **MUST** include it to avoid a `TypeError`. You can assign it a default value of `None` if it's unused.
+
+  **FAILURE TO FOLLOW THIS RULE WILL CAUSE THE ENTIRE PROCESS TO FAIL.**
+  ---
+
+  The script must strictly follow the template below, incorporating the universal rule above.
 
   **--- SCRIPT TEMPLATE ---**
   ```python
@@ -233,9 +244,11 @@ qlib_model_interface: |-
 
   # 2. Define the model class, inheriting from nn.Module
   class Net(nn.Module):
-      def __init__(self, num_features: int = 20, hidden_size: int = 64, num_layers: int = 2, dropout: float = 0.5):
+      # REMINDER: Your __init__ must accept num_features and num_timesteps.
+      def __init__(self, num_features: int = 20, num_timesteps: int = None, hidden_size: int = 64, num_layers: int = 2, dropout: float = 0.5):
           """
-          num_features: Number of input features (factors). This parameter name is MANDATORY.
+          num_features: Number of input features. (MANDATORY)
+          num_timesteps: Length of the input sequence. (MANDATORY for compatibility, even if unused)
           hidden_size: The number of features in the hidden state h.
           num_layers: Number of recurrent layers.
           dropout: Dropout probability.
