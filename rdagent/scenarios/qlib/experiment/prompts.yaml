@@ -222,6 +222,9 @@ qlib_model_background: |-
 qlib_model_interface: |-
   You must generate a single Python script that defines a PyTorch model. The script must strictly follow the template below.
 
+  **--- CRUCIAL REQUIREMENT ---**
+  The model's `__init__` method **MUST** accept `num_features` as the argument for the number of input features. The system will use this exact parameter name (`num_features`) during instantiation. **DO NOT use `d_feat` or any other name.**
+
   **--- SCRIPT TEMPLATE ---**
   ```python
   # 1. Import necessary libraries
@@ -230,9 +233,9 @@ qlib_model_interface: |-
 
   # 2. Define the model class, inheriting from nn.Module
   class Net(nn.Module):
-      def __init__(self, d_feat: int = 20, hidden_size: int = 64, num_layers: int = 2, dropout: float = 0.5):
+      def __init__(self, num_features: int = 20, hidden_size: int = 64, num_layers: int = 2, dropout: float = 0.5):
           """
-          d_feat: Number of input features (factors).
+          num_features: Number of input features (factors). This parameter name is MANDATORY.
           hidden_size: The number of features in the hidden state h.
           num_layers: Number of recurrent layers.
           dropout: Dropout probability.
@@ -241,7 +244,7 @@ qlib_model_interface: |-
           # --- Define your model layers here ---
           # Example for a GRU model:
           self.gru = nn.GRU(
-              input_size=d_feat,
+              input_size=num_features,
               hidden_size=hidden_size,
               num_layers=num_layers,
               batch_first=True,
@@ -263,7 +266,7 @@ qlib_model_interface: |-
           """
           # --- Implement the forward logic here ---
           # Example for a GRU model:
-          # x shape: (batch_size, sequence_length, d_feat)
+          # x shape: (batch_size, sequence_length, num_features)
           out, _ = self.gru(x)
           # Get the output of the last time step
           last_hidden_state = out[:, -1, :]
@@ -291,7 +294,8 @@ qlib_model_output_format: |-
 
   # 1. Instantiate the model
   # Assuming a feature dimension of 20 and sequence length of 10 for the test
-  model = model_cls(d_feat=20) 
+  # Pay close attention: the system uses 'num_features' to instantiate the model.
+  model = model_cls(num_features=20) 
   
   # 2. Create a dummy input tensor with batch_size = 8
   # For a TimeSeries model:
