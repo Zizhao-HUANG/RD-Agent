@@ -119,7 +119,7 @@ def pull_image_with_progress(image: str) -> None:
 class EnvConf(ExtendedBaseSettings):
     default_entry: str
     extra_volumes: dict = {}
-    running_timeout_period: int | None = 14400  # 4 hours
+    running_timeout_period: int | None = 30000  # 8 hours
     # helper settings to support transparent;
     enable_cache: bool = True
     retry_count: int = 5  # retry count for the docker run
@@ -643,7 +643,7 @@ class DockerConf(EnvConf):
     mem_limit: str | None = "48g"  # Add memory limit attribute
     cpu_count: int | None = None  # Add CPU limit attribute
 
-    running_timeout_period: int | None = 14400  # 4 hours
+    running_timeout_period: int | None = 30000  # 8 hours
 
     enable_cache: bool = True  # enable the cache mechanism
 
@@ -718,7 +718,7 @@ class KGDockerConf(DockerConf):
     #     Path("git_ignore_folder/data").resolve(): "/root/.data/"
     # }
 
-    running_timeout_period: int | None = 14400
+    running_timeout_period: int | None = 30000
     mem_limit: str | None = (
         "48g"  # Add memory limit attribute # new-york-city-taxi-fare-prediction may need more memory
     )
@@ -733,7 +733,7 @@ class DSDockerConf(DockerConf):
     mount_path: str = "/kaggle/workspace"
     default_entry: str = "python main.py"
 
-    running_timeout_period: int | None = 14400
+    running_timeout_period: int | None = 30000
     mem_limit: str | None = (
         "48g"  # Add memory limit attribute # new-york-city-taxi-fare-prediction may need more memory
     )
