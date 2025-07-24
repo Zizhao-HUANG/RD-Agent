@@ -47,7 +47,7 @@ data_handler_config: &data_handler_config
               fields_group: feature
     learn_processors:
         - class: DropnaLabel
-        - class: CSZScoreNorm
+        - class: CSRankNorm
           kwargs:
               fields_group: label
 
