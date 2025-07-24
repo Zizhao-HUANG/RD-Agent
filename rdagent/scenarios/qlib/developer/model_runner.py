@@ -149,10 +149,10 @@ class QlibModelRunner(CachedRunner[QlibModelExperiment]):
                 "d_model": 256,
                 "nhead": 8,
                 "num_layers": 6,
-                "dropout": 0.3,
-                "num_timesteps": 240,  # Added the missing variable
+                "dropout": 0.5,
+                "num_timesteps": 480,  # Added the missing variable
                 "dataset_cls": "DatasetH",  # Default dataset class
-                "step_len": 20,  # Default step length for time series
+                "step_len": 480,  # Default step length for time series
             }
 
             template_context = {}
@@ -181,10 +181,10 @@ class QlibModelRunner(CachedRunner[QlibModelExperiment]):
             # Override dataset_cls and step_len based on model type
             if exp.sub_tasks[0].model_type == "TimeSeries":
                 template_context["dataset_cls"] = "TSDatasetH"
-                template_context["step_len"] = 20
+                template_context["step_len"] = 480
                 # For time series models, ensure num_timesteps is set
                 if "num_timesteps" not in template_context:
-                    template_context["num_timesteps"] = 240
+                    template_context["num_timesteps"] = 480
             else:  # Tabular
                 template_context["dataset_cls"] = "DatasetH"
                 # For tabular models, remove step_len as it's not needed

@@ -273,6 +273,14 @@ factor_experiment_output_format: |-
               "variable or function name 1": "description of variable or function 1",
               "variable or function name 2": "description of variable or function 2"
           }
+      },
+      "factor name 3": {
+          "description": "description of factor 3, start with its type, e.g. [Value Factor]",
+          "formulation": "latex formulation of factor 3",
+          "variables": {
+              "variable or function name 1": "description of variable or function 1",
+              "variable or function name 2": "description of variable or function 2"
+          }
       }
       # Don't add ellipsis (...) or any filler text that might cause JSON parsing errors here!
   }
@@ -281,37 +289,122 @@ model_experiment_output_format: |-
   You must design **exactly one model** to test the hypothesis.
   Your response must be a single, valid JSON object and nothing else.
 
-  **CRITICAL INSTRUCTIONS FOR VRAM-AWARE HYPERPARAMETER TUNING:**
-  1.  **Context Reminder:** The target hardware is an **NVIDIA B200 with 192 GB of VRAM**. Your `batch_size` and model complexity should be set with this capacity in mind.
-  2.  Before setting the `training_hyperparameters`, you **MUST** perform a VRAM estimation based on the model's architecture.
-  3.  The `vram_estimation_and_justification` field is not just a report; it is where you must **document your reasoning for choosing the model's scale**. This process should guide your final parameter selection.
-  4.  Use the result of your estimation to set a reasonable `batch_size`. If your model is large or its VRAM usage is uncertain, start with a conservative `batch_size` (e.g., 32, 64, or lower).
-  5.  The VRAM calculation method must be tailored to the architecture. The following are illustrative examples:
+  ### GUIDANCE ON HYPERPARAMETER SELECTION ###
+
+  **A. CRITICAL INSTRUCTIONS FOR STRATEGIC HYPERPARAMETER SELECTION (The "Why" and "What"):**
+  1.  **Hypothesis-Driven Choices:** Your hyperparameter choices are not arbitrary; they are a direct translation of the `hypothesis` into a concrete experiment. You MUST explicitly state how your choices serve to test the given hypothesis in the `design_rationale_and_hyperparameter_justification` field.
+      *   **Example:** If the hypothesis is "a simpler model might generalize better," you must justify your choice of a smaller `hidden_size`/`d_model`, fewer `num_layers`/`n_estimators`, or a larger `min_child_weight`.
+  2.  **Justify Key Trade-offs:** In the `design_rationale_and_hyperparameter_justification` field, you must provide a rationale for the most critical hyperparameters, explaining the trade-offs you considered. This includes, but is not limited to:
+      *   **Model Capacity vs. Regularization:** Justify how your choices for model size (e.g., `hidden_size`, `num_layers`, `d_model`, `n_estimators`, `max_depth`) are balanced by regularization techniques (e.g., `dropout`, `weight_decay`, `reg_alpha`, `reg_lambda`, `subsample`) to prevent overfitting. A more complex model requires stronger regularization.
+      *   **Learning Dynamics:** Justify your choice of `optimizer` and `lr`. AdamW is a strong default for deep learning models. The learning rate is critical; a common starting range is `1e-5` to `1e-3`. For Transformers, a learning rate scheduler with warmup is almost mandatory. For GBDTs, the `learning_rate` (often called `eta`) has a direct trade-off with `n_estimators`.
+      *   **Training Duration & Stability:** Justify `n_epochs` based on expected convergence speed. `early_stop` is a crucial safeguard. `batch_size` affects both VRAM usage and gradient stability.
+  3.  **Learn from the Past:** Before finalizing your parameters, mentally consult the `historical_archive`. If a similar architecture has been tested, use its results as a baseline. In your justification, mention if you are building on a past success or correcting a past failure.
+
+  **B. MODEL-FAMILY SPECIFIC GUIDANCE (The "Which"):**
+  *   **For GBDTs (XGBoost, LightGBM, CatBoost):**
+      *   **Core Trade-off:** The balance between `n_estimators` (number of trees) and `learning_rate` (eta). More trees require a lower learning rate.
+      *   **Tree Complexity:** Control this with `max_depth`, `min_child_weight` (XGBoost), or `num_leaves` (LightGBM). Deeper trees can capture more complex interactions but overfit easily.
+      *   **Stochasticity/Regularization:** Use `subsample` (row sampling) and `colsample_bytree` (feature sampling) to introduce randomness and prevent individual trees from becoming too correlated.
+  *   **For RNNs (LSTM, GRU, ALSTM):**
+      *   **Capacity:** `hidden_size` and `num_layers` are the primary levers for model capacity.
+      *   **Information Flow:** Consider `bidirectional=True` if future context is meaningful for predicting the present, but be aware of the increased computational cost.
+      *   **Regularization:** `dropout` between RNN layers is the most effective regularizer.
+  *   **For Transformers (Transformer, TRA, Localformer, HIST):**
+      *   **Core Dimensions:** `d_model` (embedding dimension) and `nhead` (number of attention heads) are fundamental. `d_model` must be divisible by `nhead`.
+      *   **Depth & Complexity:** `num_encoder_layers` controls the model's depth. `dim_feedforward` controls the size of the intermediate MLP layer within each block.
+      *   **Critical for Training:** These models are highly sensitive to the `lr_scheduler`. A common choice is a linear warmup followed by a cosine or linear decay.
+  *   **For TCNs (TCN, TCN-TS):**
+      *   **Receptive Field:** This is the most important concept. It's controlled by `kernel_size` and the `num_channels` array (whose length determines the number of layers and whose values determine channel counts). Larger kernels and more layers increase the historical window the model can "see".
+      *   **Causal Convolutions:** Ensure the architecture uses causal padding to prevent lookahead bias.
+  *   **For TabNet:**
+      *   **Sequential Attention:** `n_steps` defines the number of decision steps. `n_d` and `n_a` control the dimensions of the shared and step-specific feature transformers.
+      *   **Sparsity:** `lambda_sparse` is a key regularization hyperparameter that encourages sparse feature selection at each step.
+
+  **C. CRITICAL INSTRUCTIONS FOR VRAM-AWARE TUNING (The "How Much"):**
+  1.  **Context Reminder:** The target hardware is an **NVIDIA B200 with 192 GB of VRAM**. Your `batch_size` and model complexity are ultimately constrained by this.
+  2.  **VRAM Estimation First:** After deciding on the model's architectural scale (based on Sections A & B), you **MUST** perform a VRAM estimation. This validates the feasibility of your chosen scale.
+  3.  **Document Your Reasoning:** The `design_rationale_and_hyperparameter_justification` field is where you document your entire thought process, from strategic choices to feasibility analysis.
+  4.  **Set Batch Size:** Use the result of your estimation to set a reasonable `batch_size`. If your model is large (e.g., a large Transformer), start conservatively and justify it. Remember the interplay: `batch_size` affects both VRAM and optimization dynamics.
+  5.  **Calculation Methods:**
       *   **Example 1: Benchmark-based Scaling (Good for Transformers):** Use a similar completed experiment from `historical_archive` as a reference. Scale its dynamic VRAM based on the workload ratio `(B * L * D * layers)`.
       *   **Example 2: Peak-Tensor Analysis (Good for TCNs):** Calculate the VRAM for the largest padded intermediate tensor: `V_peak = (B * C * (L + padding) * 2) / 1024^3`. The total VRAM is a multiple of this (e.g., `V_peak * 9`).
-      *   **For Other Architectures:** If a precise calculation is not feasible, provide a qualitative assessment and justify a "profiling run" with a minimal `batch_size` (e.g., 16).
+      *   **For Other Architectures:** If a precise calculation is not feasible, provide a qualitative assessment and justify a "profiling run" with a minimal `batch_size`.
 
   **JSON OUTPUT SCHEMA:**
   {
     "model_name (The name of the model)": {
-        "design_rationale_and_vram_estimation": "YOUR STRATEGIC RATIONALE AND VRAM ESTIMATION FOR THE PROPOSED MODEL SCALE GOES HERE. Define this *before* setting the hyperparameters below. Justify why the chosen scale (e.g., hidden_size, num_layers) is appropriate.",
+        "design_rationale_and_hyperparameter_justification": "YOUR COMPREHENSIVE RATIONALE GOES HERE. This must cover: 1. How the model design tests the hypothesis. 2. Justification for key architectural hyperparameters (covering model-family specifics from Guidance B). 3. Justification for key training hyperparameters (optimizer, lr, scheduler). 4. The detailed VRAM estimation that validates your choices and determines the batch_size.",
         "description": "A detailed description of the model, linking it back to the parent hypothesis and the design rationale above.",
-        "formulation": "A LaTeX formula representing the model's core mathematical operation.",
+        "formulation": "A LaTeX formula representing the model's core mathematical operation (e.g., Attention, GBDT update step, or LSTM cell).",
         "architecture": "An extremely detailed, layer-by-layer description of the model's architecture (e.g., neural network layers, tree structures). This must be specific enough for direct translation into code.",
         "variables": {
-            "\\hat{y}_u": "The predicted output for node u",
-            "variable_name_2": "Description of variable 2"
+            "\\hat{y}_t": "The predicted output at time t",
+            "X_{t-L:t-1}": "Input feature sequence of length L up to time t-1",
+            "variable_name_3": "Description of variable 3"
         },
         "hyperparameters": {
-            "hyperparameter_name_1": "value of hyperparameter 1",
-            "hyperparameter_name_2": "value of hyperparameter 2"
+            // --- General Deep Learning ---
+            "dropout": "e.g., 0.1. Rate for dropout layers.",
+            "activation": "e.g., 'ReLU'. Activation function for MLP layers.",
+            "normalization": "e.g., 'BatchNorm'. Type of normalization layer ('BatchNorm', 'LayerNorm', or null).",
+
+            // --- For GBDTs (XGBoost, CatBoost, GBDT) ---
+            "n_estimators": "e.g., 500. Number of boosting rounds/trees.",
+            "learning_rate": "e.g., 0.05. Step size shrinkage (eta).",
+            "max_depth": "e.g., 6. Maximum depth of a tree.",
+            "subsample": "e.g., 0.8. Fraction of samples to be used for fitting individual base learners.",
+            "colsample_bytree": "e.g., 0.8. Fraction of columns to be used when constructing each tree.",
+            "min_child_weight": "e.g., 1. Minimum sum of instance weight needed in a child (for XGBoost).",
+            "reg_alpha": "e.g., 0.0. L1 regularization term on weights.",
+            "reg_lambda": "e.g., 1.0. L2 regularization term on weights.",
+            "num_leaves": "e.g., 31. Max number of leaves in one tree (for LightGBM).",
+
+            // --- For RNNs (LSTM, GRU, ALSTM, etc.) ---
+            "hidden_size": "e.g., 128. The number of features in the hidden state h.",
+            "num_layers": "e.g., 2. Number of recurrent layers.",
+            "bidirectional": "e.g., false. If True, becomes a bidirectional RNN.",
+
+            // --- For Transformers (Transformer, TRA, Localformer, HIST) ---
+            "d_model": "e.g., 256. The number of expected features in the encoder/decoder inputs.",
+            "nhead": "e.g., 8. The number of heads in the multi-head attention models.",
+            "num_encoder_layers": "e.g., 4. The number of sub-encoder-layers in the encoder.",
+            "dim_feedforward": "e.g., 1024. The dimension of the feedforward network model.",
+
+            // --- For TCNs (TCN, TCN-TS) ---
+            "num_channels": "e.g., [64, 64, 64, 64]. A list where len is num_layers and values are channels in each layer.",
+            "kernel_size": "e.g., 3. The size of the convolutional kernel.",
+
+            // --- For TabNet ---
+            "n_d": "e.g., 64. Width of the decision prediction layer.",
+            "n_a": "e.g., 64. Width of the attention embedding for each mask.",
+            "n_steps": "e.g., 5. Number of decision steps.",
+            "gamma": "e.g., 1.3. Coefficient for feature reusage.",
+            "lambda_sparse": "e.g., 1e-4. Sparsity regularization.",
+
+            // --- For Graph Models (GATs) ---
+            "num_heads": "e.g., [8, 1]. A list of number of attention heads for each GAT layer.",
+            "hidden_units": "e.g., [64]. A list of output feature dimensions for each GAT layer."
         },
         "training_hyperparameters": {
-            "n_epochs": "100",
-            "lr": "5e-5",
-            "early_stop": 10,
-            "batch_size": 512,
-            "weight_decay": 0.01
+            "n_epochs": 200,
+            "lr": "1e-4",
+            "early_stop": 50,
+            "batch_size": 1024,
+            "weight_decay": "1e-4",
+            "precision": "mixed_float16",
+            "loss_fn": "e.g., 'MSELoss'. The loss function to use.",
+            "optimizer": "e.g., 'AdamW'. The optimization algorithm.",
+            "optimizer_kwargs": {
+                "betas": "[0.9, 0.999]",
+                "eps": "1e-8"
+            },
+            "lr_scheduler": "e.g., 'CosineAnnealingLR'. The learning rate scheduler.",
+            "lr_scheduler_kwargs": {
+                "T_max": 200,
+                "eta_min": "1e-6",
+                "warmup_steps": "e.g., 1000"
+            },
+            "seed": 42
         },
         "model_type": "Tabular or TimeSeries"
     }
