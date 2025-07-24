@@ -99,7 +99,8 @@ model_hypothesis_specification: |-
 
   **1. Architectural Rationale:**
     *   Briefly explain why this architecture is a logical next step, referencing past results.
-    *   State your initial `batch_size` assumption. For new architectures, always start conservatively (e.g., 16-128) to establish a baseline.
+    *   State your initial `batch_size` assumption. For new architectures, always start conservatively (e.g., 128-512) to establish a baseline.
+    *   For new experiments, always start with `GBDTs` to establish a baseline.
 
   **2. VRAM Estimation (Mandatory):**
     *   Your VRAM calculation must be tailored to the specific architecture you propose. The following methods are **illustrative examples** to guide your reasoning, not a restrictive list. **You are free to propose any model from your architectural toolbox.**
@@ -350,6 +351,7 @@ model_experiment_output_format: |-
             "dropout": "e.g., 0.1. Rate for dropout layers.",
             "activation": "e.g., 'ReLU'. Activation function for MLP layers.",
             "normalization": "e.g., 'BatchNorm'. Type of normalization layer ('BatchNorm', 'LayerNorm', or null).",
+            "precision": "mixed_float16", mixed_float16 is VERY IMPORTANT for faster training
 
             // --- For GBDTs (XGBoost, CatBoost, GBDT) ---
             "n_estimators": "e.g., 500. Number of boosting rounds/trees.",
