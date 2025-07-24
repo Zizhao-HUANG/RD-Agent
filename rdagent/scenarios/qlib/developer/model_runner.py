@@ -120,11 +120,11 @@ class QlibModelRunner(CachedRunner[QlibModelExperiment]):
             if exist_sota_factor_exp:
                 config_name = "conf_sota_factors_model.yaml"
                 env_to_use.update(
-                    {"dataset_cls": "TSDatasetH", "num_features": num_features, "step_len": 20}
+                    {"dataset_cls": "TSDatasetH", "num_features": num_features, "step_len": 90}
                 )
             else:
                 config_name = "conf_baseline_factors_model.yaml"
-                env_to_use.update({"dataset_cls": "TSDatasetH", "step_len": 20})
+                env_to_use.update({"dataset_cls": "TSDatasetH", "step_len": 90})
         elif exp.sub_tasks[0].model_type == "Tabular":
             if exist_sota_factor_exp:
                 config_name = "conf_sota_factors_model.yaml"
