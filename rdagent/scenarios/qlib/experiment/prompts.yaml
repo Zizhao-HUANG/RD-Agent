@@ -230,7 +230,7 @@ qlib_model_interface: |-
 
   # 2. Define the model class, inheriting from nn.Module
   class Net(nn.Module):
-      def __init__(self, d_feat: int = 6, hidden_size: int = 64, num_layers: int = 2, dropout: float = 0.5):
+      def __init__(self, d_feat: int = 20, hidden_size: int = 64, num_layers: int = 2, dropout: float = 0.5):
           """
           d_feat: Number of input features (factors).
           hidden_size: The number of features in the hidden state h.
