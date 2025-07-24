@@ -178,3 +178,5 @@ rdagent/app/benchmark/factor/example.json
 # UI Server resources
 videos/
 static/
+
+all_daily_from_tushare.csv
