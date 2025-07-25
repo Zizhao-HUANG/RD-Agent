@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-从 Tushare 下载 A 股日线行情数据 (最终修正版)
+从 Tushare 下载 A 股日线行情数据 (最终修正版 - 并行优化)
 目标：生成一个与 Qlib 原始 daily_pv.h5 文件在数据结构和数值逻辑上
       都高度兼容，同时扩展了股票池和时间范围的高质量数据文件。
 
@@ -11,6 +11,7 @@
 3. 使用计算出的 $factor 对不复权成交量进行复权，得到 $volume。
 4. 将指数数据作为特殊情况独立处理，精确设置其 $factor (包括 NaN)。
 5. 保留数据中的 NaN 值，与原始文件格式保持一致。
+6. [新增] 使用多线程并行下载，大幅提升下载效率。
 """
 
 import tushare as ts
@@ -19,6 +20,8 @@ import numpy as np
 import time
 from datetime import datetime
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import tqdm # 引入tqdm来显示进度条
 
 # --- 配置区 ---
 # Tushare Token - 请替换为您自己的Token
@@ -27,9 +30,11 @@ TUSHARE_TOKEN = "4e231cd75686342a6b80f13b2d8c5ca8c682cdeb9b668830dc97fc0d"
 START_DATE = '19990101'
 END_DATE = datetime.now().strftime('%Y%m%d') # 动态获取当前日期
 # 输出文件名
-OUTPUT_FILENAME = "daily_pv_tushare_corrected.h5"
+OUTPUT_FILENAME = "daily_pv_tushare_corrected_parallel.h5"
 # API调用延时（秒），保护Tushare积分
 API_DELAY = 0.3
+# 并行下载的线程数 (根据你的Tushare积分限制调整，200次/分钟，建议5-8个线程)
+MAX_WORKERS = 8
 
 def setup_tushare():
     """初始化 Tushare"""
@@ -68,7 +73,8 @@ def download_stock_data(pro, ts_code, start_date, end_date):
         time.sleep(API_DELAY)
         
         if df_hfq.empty:
-            print(f"  {ts_code}: 无数据")
+            # 在并行模式下，减少不必要的打印
+            # print(f"  {ts_code}: 无数据")
             return None
 
         # 2. 获取不复权数据 (None)
@@ -76,7 +82,7 @@ def download_stock_data(pro, ts_code, start_date, end_date):
         time.sleep(API_DELAY)
 
         if df_unadj.empty:
-            print(f"  {ts_code}: 警告！有后复权数据但无不复权数据")
+            # print(f"  {ts_code}: 警告！有后复权数据但无不复权数据")
             return None
 
         # 3. 合并数据
@@ -87,10 +93,11 @@ def download_stock_data(pro, ts_code, start_date, end_date):
             how='inner'
         )
         
-        print(f"  {ts_code}: 下载了 {len(df_merged)} 条记录")
+        # print(f"  {ts_code}: 下载了 {len(df_merged)} 条记录")
         return df_merged
         
     except Exception as e:
+        # 在并行模式下，错误信息可能会交错，但仍然需要打印
         print(f"  {ts_code}: 下载失败 - {e}")
         return None
 
@@ -192,8 +199,8 @@ def save_to_hdf5(data, filename):
         print(f"  验证失败: {e}")
 
 def main():
-    """主函数"""
-    print("=== Tushare A股数据下载脚本 (最终修正版) ===")
+    """主函数 - 并行优化版"""
+    print("=== Tushare A股数据下载脚本 (最终修正版 - 并行优化) ===")
     print(f"数据范围: {START_DATE} to {END_DATE}")
     print(f"Tushare Token: {TUSHARE_TOKEN[:10]}...")
     
@@ -205,16 +212,27 @@ def main():
     failed_stocks = []
     failed_indices = []
     
-    print(f"\n开始下载 {len(stocks)} 只股票的数据...")
-    for i, row in stocks.iterrows():
-        ts_code = row['ts_code']
-        print(f"[股票 {i+1}/{len(stocks)}] {ts_code}")
-        data = download_stock_data(pro, ts_code, START_DATE, END_DATE)
-        if data is not None:
-            raw_stock_list.append(data)
-        else:
-            failed_stocks.append(ts_code)
-            
+    # --- [核心修改] 并行下载股票数据 ---
+    print(f"\n开始并行下载 {len(stocks)} 只股票的数据 (使用 {MAX_WORKERS} 个线程)...")
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        # 创建future任务列表
+        future_to_stock = {executor.submit(download_stock_data, pro, row['ts_code'], START_DATE, END_DATE): row['ts_code'] for _, row in stocks.iterrows()}
+        
+        # 使用tqdm显示进度条，并收集结果
+        for future in tqdm.tqdm(as_completed(future_to_stock), total=len(stocks), desc="下载股票"):
+            ts_code = future_to_stock[future]
+            try:
+                data = future.result()
+                if data is not None:
+                    raw_stock_list.append(data)
+                else:
+                    # download_stock_data内部已经处理了失败情况，这里只记录失败的ts_code
+                    failed_stocks.append(ts_code)
+            except Exception as exc:
+                print(f'\n{ts_code} 在主线程中生成了异常: {exc}')
+                failed_stocks.append(ts_code)
+
+    # --- 下载指数数据 (串行，因为数量少) ---
     print(f"\n开始下载 {len(indices)} 个指数的数据...")
     for i, row in indices.iterrows():
         ts_code = row['ts_code']
@@ -228,7 +246,7 @@ def main():
     print("\n--- 下载总结 ---")
     print(f"股票成功: {len(raw_stock_list)}, 失败: {len(failed_stocks)}")
     print(f"指数成功: {len(raw_index_list)}, 失败: {len(failed_indices)}")
-    if failed_stocks: print(f"失败的股票: {failed_stocks}")
+    if failed_stocks: print(f"失败的股票 (前10个): {failed_stocks[:10]}")
     if failed_indices: print(f"失败的指数: {failed_indices}")
     
     # --- 数据处理与合并 ---
@@ -258,8 +276,9 @@ def main():
     final_df = final_df.sort_index()
     
     print(f"最终数据形状: {final_df.shape}")
-    print(f"日期范围: {final_df.index.levels[0].min()} 到 {final_df.index.levels[0].max()}")
-    print(f"股票/指数数量: {len(final_df.index.levels[1])}")
+    if not final_df.empty:
+        print(f"日期范围: {final_df.index.levels[0].min()} 到 {final_df.index.levels[0].max()}")
+        print(f"股票/指数数量: {len(final_df.index.levels[1])}")
 
     # --- 保存文件 ---
     save_to_hdf5(final_df, OUTPUT_FILENAME)
