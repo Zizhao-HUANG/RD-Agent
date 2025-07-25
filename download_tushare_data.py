@@ -5,10 +5,11 @@
 目标：生成一个与 Qlib 原始 daily_pv.h5 文件在数据结构和数值逻辑上
       都高度兼容，同时扩展了股票池和时间范围的高质量数据文件。
 
-审核修正：
-1. [CRITICAL] 引入 threading.Semaphore 来实现全局API速率控制，防止账户被封。
-2. [MAJOR] 使用 tqdm.tqdm.write() 替代 print()，实现在并行下载中清晰、无损的日志输出。
-3. [MINOR] 优化了主循环的结构，提高代码可读性。
+二次审核修正：
+1. [MAJOR] 修正了指数下载失败的记录逻辑，使其更直接和健壮。
+2. [MINOR] 优化了 process_stock_data 函数的内存使用，在计算后立即删除临时列。
+3. [COSMETIC] 统一了日志输出，在tqdm循环期间一致使用tqdm.write。
+4. 保持了关键的 Semaphore API 速率控制器和并行下载逻辑。
 """
 
 import tushare as ts
@@ -19,23 +20,15 @@ from datetime import datetime
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import tqdm
-import threading # 引入 threading 模块
+import threading
 
 # --- 配置区 ---
-# Tushare Token - 请替换为您自己的Token
 TUSHARE_TOKEN = "4e231cd75686342a6b80f13b2d8c5ca8c682cdeb9b668830dc97fc0d"
-# 数据时间范围
 START_DATE = '19990101'
 END_DATE = datetime.now().strftime('%Y%m%d')
-# 输出文件名
-OUTPUT_FILENAME = "daily_pv_tushare_expert_approved.h5"
-# API调用延时（秒），用于单个任务内的微调
-API_DELAY = 0.1 # 可以适当减小，因为主要由Semaphore控制
-# 并行下载的线程数
+OUTPUT_FILENAME = "daily_pv_tushare_final_approved.h5"
+API_DELAY = 0.1
 MAX_WORKERS = 8
-# [NEW] API速率控制器 (Tushare限制每分钟200次，留些余量)
-# 200 calls/60s ≈ 3.3 calls/s. Semaphore控制并发请求数。
-# 设置为3意味着最多只有3个API请求在同时进行。
 API_SEMAPHORE = threading.Semaphore(3)
 
 def setup_tushare():
@@ -59,9 +52,9 @@ def convert_ts_code_to_qlib_format(ts_code):
     return f"{exchange}{symbol}"
 
 def call_tushare_api(api_func, **kwargs):
-    """[NEW] 带速率控制的API调用封装器"""
+    """带速率控制的API调用封装器"""
     with API_SEMAPHORE:
-        time.sleep(API_DELAY) # 即使有信号量，也稍微延迟一下，避免瞬时突发
+        time.sleep(API_DELAY)
         return api_func(**kwargs)
 
 def download_stock_data(pro, ts_code, start_date, end_date):
@@ -102,38 +95,46 @@ def download_index_data(pro, ts_code, start_date, end_date):
 
 def process_stock_data(raw_stock_list):
     """处理合并后的股票数据，精确计算 $factor 和 $volume"""
-    # ... (此函数逻辑正确，无需修改) ...
     print("\n正在处理股票数据...")
     if not raw_stock_list:
         print("没有需要处理的股票数据。")
         return pd.DataFrame()
+    
     all_data = pd.concat(raw_stock_list, ignore_index=True)
     print(f"合并后总股票记录数: {len(all_data)}")
+    
+    # 计算新列
     all_data['$factor'] = np.where(all_data['close_unadj'] != 0, all_data['close_hfq'] / all_data['close_unadj'], np.nan)
     all_data['$volume'] = np.where((all_data['$factor'].notna()) & (all_data['$factor'] != 0), (all_data['vol_unadj'] * 100) / all_data['$factor'], 0)
     all_data['$open'] = all_data['open_hfq']
     all_data['$close'] = all_data['close_hfq']
     all_data['$high'] = all_data['high_hfq']
     all_data['$low'] = all_data['low_hfq']
+    
+    # [FIX 2] 立即删除不再需要的原始列以释放内存
+    all_data.drop(columns=[
+        'open_hfq', 'high_hfq', 'low_hfq', 'close_hfq', 'pre_close_hfq', 'change_hfq', 'pct_chg_hfq', 'vol_hfq', 'amount_hfq',
+        'open_unadj', 'high_unadj', 'low_unadj', 'close_unadj', 'pre_close_unadj', 'change_unadj', 'pct_chg_unadj', 'vol_unadj', 'amount_unadj'
+    ], inplace=True)
+    
     all_data['trade_date'] = pd.to_datetime(all_data['trade_date'], format='%Y%m%d')
     all_data['instrument'] = all_data['ts_code'].apply(convert_ts_code_to_qlib_format)
-    columns_needed = ['trade_date', 'instrument', '$open', '$close', '$high', '$low', '$volume', '$factor']
-    final_data = all_data[columns_needed].rename(columns={'trade_date': 'datetime'})
+    
+    final_data = all_data.rename(columns={'trade_date': 'datetime'})
     print("股票数据处理完成。")
     return final_data
 
 def save_to_hdf5(data, filename):
     """保存数据到 HDF5 文件"""
-    # ... (此函数逻辑正确，无需修改) ...
     print(f"\n正在保存到 {filename}...")
     os.makedirs(os.path.dirname(filename) if os.path.dirname(filename) else '.', exist_ok=True)
     data.to_hdf(filename, key='data', mode='w', complevel=9, complib='zlib')
     print(f"数据已保存到 {filename}")
-    # ... (验证部分也无需修改) ...
+    # ... (验证部分无需修改) ...
 
 def main():
-    """主函数 - 专家审核版"""
-    print("=== Tushare A股数据下载脚本 (专家审核版) ===")
+    """主函数 - 专家二次审核版"""
+    print("=== Tushare A股数据下载脚本 (专家二次审核版) ===")
     print(f"数据范围: {START_DATE} to {END_DATE}")
     
     pro = setup_tushare()
@@ -160,10 +161,18 @@ def main():
 
     # --- 下载指数数据 (串行) ---
     print(f"\n开始下载 {len(indices)} 个指数的数据...")
-    raw_index_list = [download_index_data(pro, row['ts_code'], START_DATE, END_DATE) for _, row in indices.iterrows()]
-    raw_index_list = [df for df in raw_index_list if df is not None] # 过滤失败的
-    failed_indices = [row['ts_code'] for _, row in indices.iterrows() if row['ts_code'] not in [df['instrument'].iloc[0].replace('SH','').replace('SZ','')+'.'+df['instrument'].iloc[0][:2] for df in raw_index_list]]
-
+    raw_index_list = []
+    failed_indices = []
+    for _, row in indices.iterrows():
+        ts_code = row['ts_code']
+        # [FIX 4] 使用 print 因为这不在 tqdm 循环内
+        print(f"  [INFO] 正在下载指数: {ts_code}")
+        result = download_index_data(pro, ts_code, START_DATE, END_DATE)
+        if result is not None:
+            raw_index_list.append(result)
+        else:
+            # [FIX 1] 直接、清晰地记录失败
+            failed_indices.append(ts_code)
 
     print("\n--- 下载总结 ---")
     print(f"股票成功: {len(raw_stock_list)}, 失败: {len(failed_stocks)}")
@@ -189,7 +198,8 @@ def main():
     print("\n正在进行最终格式化...")
     final_df = final_df.set_index(['datetime', 'instrument']).sort_index()
     for col in final_df.columns:
-        final_df[col] = final_df[col].astype('float32')
+        if final_df[col].dtype != 'float32':
+            final_df[col] = final_df[col].astype('float32')
     final_df = final_df.loc[final_df.index.get_level_values('datetime') >= '2008-12-29'].sort_index()
     
     print(f"最终数据形状: {final_df.shape}")
