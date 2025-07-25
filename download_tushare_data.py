@@ -39,7 +39,7 @@ warnings.filterwarnings(
 
 # --- 配置区 ---
 # 请将 "your_token_here" 替换为你的真实 Tushare Token
-TUSHARE_TOKEN = "your_token_here"
+TUSHARE_TOKEN = "1328e862dc870cf716f9527a5b5f8623909cd80e14d990cb42a7bbb6"
 START_DATE = '19990101'
 END_DATE = datetime.now().strftime('%Y%m%d')
 OUTPUT_FILENAME = "daily_pv_tushare_rebuilt_v4.h5"
@@ -49,7 +49,7 @@ QLIB_COLUMN_ORDER = ['$open', '$close', '$high', '$low', '$volume', '$factor']
 # --- 性能优化参数 ---
 # Tushare Pro普通用户限制为 200次/分钟
 API_CALLS_PER_MINUTE = 200
-MAX_WORKERS = 10  # 并行下载的线程数
+MAX_WORKERS = 14  # 并行下载的线程数
 # 计算每次API调用的最小延迟
 API_DELAY = 60.0 / API_CALLS_PER_MINUTE
 # 使用信号量精确控制API速率

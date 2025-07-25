@@ -20,13 +20,31 @@ qlib_factor_background: |-
   - **Incorrect**: A generic `Momentum` factor with a `window` argument. `Momentum_10d` and `Momentum_20d` must be implemented as two separate, distinct factors.
 
 qlib_factor_interface: |-
-  # CONTEXT: You are an expert Python developer specializing in high-performance financial data analysis with pandas, creating a Qlib-compatible factor calculation script.
-  # OBJECTIVE: Generate a standalone, highly efficient, and numerically robust Python script to calculate a single financial factor.
+  # CONTEXT: You are an expert Python developer specializing in high-performance financial data analysis, creating a Qlib-compatible factor calculation script.
+  # OBJECTIVE: Generate a standalone, highly efficient, and numerically robust Python script to calculate a single financial factor, explicitly designed to leverage multi-core CPUs for maximum speed.
+
+  # --- CRITICAL PERFORMANCE DIRECTIVE: PARALLEL EXECUTION ---
+  # The primary performance bottleneck in financial data analysis is single-threaded group operations.
+  # The standard `df.groupby(...).transform(...)` pattern is a SERIAL BOTTLENECK and MUST be avoided for complex calculations.
+  #
+  # MANDATORY STRATEGY: For any non-trivial time-series calculation (e.g., involving multiple rolling windows, complex arithmetic), you MUST use a parallel processing framework like `joblib` to parallelize the computation across different instruments.
+  #
+  # This involves three steps:
+  # 1. Define a function that performs all calculations for a SINGLE instrument's DataFrame.
+  # 2. Split the main DataFrame into a list of DataFrames, one for each instrument.
+  # 3. Use `joblib.Parallel` to apply the function to the list in parallel across all available CPU cores.
+  #
+  # See "EXAMPLE 1" and "EXAMPLE 4" for concrete implementations. This is the PREFERRED METHOD for performance.
 
   # --- HARD RULES ---
   # Adherence to these rules is mandatory. Violation will result in failure.
-  # 1. NO MASKING NUMERICAL ISSUES: It is strictly forbidden to use `.fillna()`, `.replace()`, or any other method to fill/replace `NaN` or `inf` values *after* a calculation. All numerical issues must be addressed at the source of the calculation (e.g., using `np.divide` for safe division, or adding a small epsilon to a denominator).
+  # 1. ROBUST CALCULATION, NOT POST-HOC MASKING: It is strictly forbidden to use `.fillna()` or `.replace()` to hide numerical errors like division-by-zero. All such issues must be fixed at the source (e.g., safe division).
+  #    **EXCEPTION**: It is PERMISSIBLE to fill `NaN` values that are the direct result of insufficient data in a rolling window. The preferred method is to fill them with 0.0 or another sensible default *immediately after the rolling operation*.
   # 2. AVOID SLOW OPERATIONS: The use of `.apply()` is strongly discouraged due to poor performance. It is only permissible if a vectorized alternative is impossible or demonstrably slower. If used, a comment `# PERF_REASON: ...` explaining the justification is mandatory.
+
+  # --- DATA TYPE OPTIMIZATION ---
+  # To reduce memory footprint and improve cache efficiency, use `float32` for calculations unless `float64` is required for precision.
+  # Convert columns early: `df['$close'] = df['$close'].astype(np.float32)`
 
   # --- I/O SPECIFICATION ---
   - **Input**: Load data from `daily_pv.h5` using `pd.read_hdf("daily_pv.h5", key="data")`.
@@ -44,7 +62,7 @@ qlib_factor_interface: |-
   df_reset = df.reset_index()
   df_reset.sort_values(["instrument", "datetime"], inplace=True) # Default sort for time-series
 
-  # 2. GROUP & CALCULATE: Perform calculations on the flattened DataFrame.
+  # 2. GROUP & CALCULATE: Perform calculations on the flattened DataFrame, using the parallel pattern from EXAMPLE 1 or 4.
   #    ... your calculation logic here ...
 
   # 3. SET: Restore the MultiIndex for the final output.
@@ -55,33 +73,71 @@ qlib_factor_interface: |-
   )
 
   # --- PERFORMANCE BEST PRACTICES & EXAMPLES ---
-  # Use these vectorized techniques.
+  # Use these techniques, prioritizing parallel methods.
 
-  # EXAMPLE 1: Time-Series Rolling Operation (Group by instrument)
-  df_reset["rolling_sum_vol"] = (
-      df_reset.groupby("instrument")["$volume"]
-              .transform(lambda s: s.rolling(20, min_periods=20).sum())
-  )
+  # EXAMPLE 1: Parallel Time-Series Rolling Operation (PREFERRED METHOD)
+  # This pattern uses all CPU cores and replaces the slow, single-threaded `groupby().transform()`.
+  from joblib import Parallel, delayed
 
-  # EXAMPLE 2: Vectorized Rolling Weighted Average (Time-Series)
-  grouped_s = df_reset.groupby("instrument")["$close"]
-  s_t0 = grouped_s.transform(lambda s: s)
-  s_t1 = grouped_s.transform(lambda s: s.shift(1))
-  df_reset["weighted_avg"] = 0.5 * s_t0 + 0.5 * s_t1
+  def rolling_sum_for_instrument(group_df):
+      group_df = group_df.sort_values("datetime")
+      # Calculate on the single-instrument group
+      group_df["factor_value"] = group_df["$volume"].rolling(20, min_periods=20).sum()
+      # Handle NaNs from the initial window period as per HARD RULES
+      group_df["factor_value"].fillna(0.0, inplace=True)
+      return group_df[["datetime", "instrument", "factor_value"]]
+
+  instrument_groups = [group for _, group in df_reset.groupby("instrument")]
+  results_list = Parallel(n_jobs=-1)(delayed(rolling_sum_for_instrument)(group) for group in instrument_groups)
+  df_with_factor = pd.concat(results_list)
+
+
+  # EXAMPLE 2: Efficient Vectorized Operations (Time-Series)
+  # This is much faster than using .transform(lambda...) for simple shifts.
+  # The .shift() method on a grouped object is highly optimized.
+  df_reset["close_t1"] = df_reset.groupby("instrument")["$close"].shift(1)
+  # The calculation is then performed on the entire columns at once (vectorized).
+  df_reset["weighted_avg"] = 0.5 * df_reset["$close"] + 0.5 * df_reset["close_t1"]
+
 
   # EXAMPLE 3: Cross-Sectional Operation (Group by datetime)
-  # For factors comparing stocks at the same time (e.g., ranking), group by `datetime`.
+  # This is typically fast as the number of groups (dates) is much smaller than instruments.
+  # Parallelization is usually not necessary here.
   df_reset["rank_pct"] = df_reset.groupby("datetime")["$close"].rank(pct=True)
+
+
+  # EXAMPLE 4: Advanced Parallel Calculation (PREFERRED METHOD)
+  # This pattern is ideal for complex factors involving multiple steps per instrument.
+  def calculate_complex_factor_for_instrument(group_df):
+      group_df = group_df.sort_values("datetime")
+      # Step 1: Calculate intermediate features
+      rolling_vol_20 = group_df["$volume"].rolling(20, min_periods=20).mean()
+      rolling_close_std_60 = group_df["$close"].rolling(60, min_periods=60).std()
+      # Step 2: Combine into the final factor, handling potential division by zero
+      denominator = rolling_close_std_60 + 1e-9
+      group_df["factor_value"] = np.divide(rolling_vol_20, denominator)
+      # Step 3: Handle NaNs from initial window periods
+      group_df["factor_value"].fillna(0.0, inplace=True)
+      return group_df[["datetime", "instrument", "factor_value"]]
+
+  instrument_groups_complex = [group for _, group in df_reset.groupby("instrument")]
+  results_list_complex = Parallel(n_jobs=-1)(delayed(calculate_complex_factor_for_instrument)(group) for group in instrument_groups_complex)
+  df_with_complex_factor = pd.concat(results_list_complex)
+
 
   # --- FINAL SCRIPT STRUCTURE ---
   import pandas as pd
   import numpy as np
+  from joblib import Parallel, delayed # Import joblib for parallel processing
 
   def calculate_<factor_name>():
-      # 1. Load data
+      # 1. Load data and optimize types
       df = pd.read_hdf("daily_pv.h5", key="data")
+      # for col in ['$open', '$high', '$low', '$close', '$volume']:
+      #     if col in df.columns:
+      #         df[col] = df[col].astype(np.float32)
 
-      # 2. Implement the "Reset-Group-Set" pattern using high-performance, vectorized logic.
+      # 2. Implement the "Reset-Group-Set" pattern using high-performance, PARALLEL logic (see EXAMPLE 1 or 4).
       #    ... your calculation logic here ...
       #    The final result of the calculation should be in a DataFrame named `out`.
 
@@ -91,15 +147,17 @@ qlib_factor_interface: |-
       assert out.columns.tolist() == ["<FactorName>"], "Output column name is incorrect."
       
       # Numerical robustness checks
-      assert np.isfinite(out.values).all(), "Output contains NaN or Inf values. This must be fixed in the calculation logic, not by using .fillna()/.replace()."
+      # The following check ensures no UNEXPECTED NaN/Inf values exist.
+      # NaNs from initial rolling periods should have been handled (e.g., filled with 0) before this point.
+      assert np.isfinite(out.values).all(), "Output contains unexpected NaN or Inf values. This must be fixed in the calculation logic, not by post-hoc cleaning."
       
       # Distributional Analysis & Non-Fatal Warnings
       factor_series = out.iloc[:, 0]
       assert factor_series.isnull().sum() == 0, "Output contains NaN values, which is prohibited."
-      assert factor_series.std() > 1e-6, f"Factor has near-zero variance ({factor_series.std():.2e}), suggesting it might be a constant or flawed."
       
-      # The following is a non-fatal check. It prints a warning but WILL NOT cause an error.
-      # This is crucial for factors that are expected to have extreme distributions.
+      std_dev = factor_series.std()
+      assert std_dev > 1e-6, f"Factor has near-zero variance ({std_dev:.2e}), suggesting it might be a constant or flawed. Check for calculation errors or extreme value clipping."
+      
       skewness = factor_series.skew()
       if abs(skewness) > 15:
           print(f"INFO: Factor distribution is highly skewed (skewness: {skewness:.2f}). This is a characteristic of the factor, not an error.")
