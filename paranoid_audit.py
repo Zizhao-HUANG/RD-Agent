@@ -17,7 +17,7 @@ from tqdm import tqdm
 # --- 配置区 ---
 # 请将路径替换为你的实际文件路径
 OLD_FILE_PATH = "/home/shenzi/RD-Agent/git_ignore_folder/factor_implementation_source_data/daily_pv.h5"
-NEW_FILE_PATH = "/home/shenzi/RD-Agent/daily_pv_tushare_fixed_optimized.h5" # 假设新文件在当前目录
+NEW_FILE_PATH = "/home/shenzi/RD-Agent/daily_pv_tushare_rebuilt.h5" # 假设新文件在当前目录
 
 # --- 辅助函数与常量 ---
 class Color:

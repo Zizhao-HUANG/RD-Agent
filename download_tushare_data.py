@@ -1,24 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-从 Tushare 下载 A 股日线行情数据 (V3 - 稳健重构版)
+从 Tushare 下载 A 股日线行情数据 (V4 - 复权逻辑修正版)
 
 目标：生成一个与 Qlib 原始 daily_pv.h5 文件在数据结构和数值逻辑上
       都高度兼容，同时扩展了股票池和时间范围的高质量数据文件。
 
 核心修正：
-1. [CRITICAL] 股票复权逻辑重构：
-   - 不再通过价格反推因子，而是直接获取权威的 `adj_factor`。
-   - 基于 `adj_factor` 和不复权行情，正向计算所有复权价格和成交量。
-   - 根本上解决了 `$factor` 非单调和数值巨大偏差的问题。
-2. [CRITICAL] 指数处理逻辑分离：
-   - 独立获取指数行情。
-   - 为指数 `$factor` 硬编码正确的值 (1.0 或 NaN)，不再套用股票逻辑。
-3. [MAJOR] 最终列序修正：
-   - 在保存前，强制将列顺序调整为与原始 Qlib 文件一致。
-4. [MINOR] 性能与健壮性优化：
-   - 优化了API调用策略，减少不必要的请求。
-   - 增强了日志和错误处理。
+1. [CRITICAL] 复权逻辑修正：
+   - 明确Tushare的`adj_factor`为前复权因子。
+   - 新增逻辑：将获取的`adj_factor`转换为以首日为基准的后复权因子。
+   - (df['$factor'] = df['adj_factor'] / df['adj_factor'].iloc[0])
+   - 此修改旨在彻底解决 `$factor` 非单调和数值巨大偏差的问题。
+2. [CRITICAL] HDF5 存储格式修正：
+   - 将 `to_hdf` 的 `format` 参数从 'table' 改为 'fixed'。
+   - 确保新文件的HDF5底层结构与原始Qlib文件完全一致。
+3. [KEPT] 指数处理逻辑、列序修正等优化保持不变。
+4. [NOTE] 暂未处理股票池不完整（退市股）的问题，此版本仍可能丢失部分历史股票。
 """
 
 import tushare as ts
@@ -44,7 +42,7 @@ warnings.filterwarnings(
 TUSHARE_TOKEN = "your_token_here"
 START_DATE = '19990101'
 END_DATE = datetime.now().strftime('%Y%m%d')
-OUTPUT_FILENAME = "daily_pv_tushare_rebuilt.h5"
+OUTPUT_FILENAME = "daily_pv_tushare_rebuilt_v4.h5"
 # 原始Qlib文件的标准列顺序
 QLIB_COLUMN_ORDER = ['$open', '$close', '$high', '$low', '$volume', '$factor']
 
@@ -65,7 +63,7 @@ def setup_tushare():
 def get_all_stocks_and_indices(pro):
     """获取所有 A 股股票和【指定】的指数列表"""
     print("正在获取所有A股股票列表...")
-    # 获取所有上市状态的股票
+    # 注意：此逻辑仅获取当前上市的股票，可能导致与包含退市股的旧数据不完全匹配
     stocks = pro.stock_basic(exchange='', list_status='L', fields='ts_code,symbol,name,list_date')
     print("正在构建目标指数列表...")
     # 仅包含 RD-Agent 框架默认配置中使用的核心指数
@@ -112,18 +110,28 @@ def download_and_process_stock(pro, ts_code, start_date, end_date):
         df = pd.merge(df_daily, df_factor, on='trade_date')
         if df.empty:
             return None
+        
+        # 数据是倒序的，需要先正序排列才能正确计算后复权因子
+        df.sort_values(by='trade_date', ascending=True, inplace=True)
+        df.reset_index(drop=True, inplace=True)
 
-        # 4. 正向计算Qlib所需的列
-        df.rename(columns={'adj_factor': '$factor'}, inplace=True)
+        # 4. 【关键修正】计算真正的后复权因子
+        # Tushare的`adj_factor`是前复权因子，需要转换为后复权因子
+        # 后复权因子 = 当日的前复权因子 / 历史第一天的前复权因子
+        first_factor = df['adj_factor'].iloc[0]
+        if first_factor == 0: # 避免除以零
+            return None
+        df['$factor'] = df['adj_factor'] / first_factor
+
+        # 5. 正向计算Qlib所需的列
         df['$open'] = df['open'] * df['$factor']
         df['$close'] = df['close'] * df['$factor']
         df['$high'] = df['high'] * df['$factor']
         df['$low'] = df['low'] * df['$factor']
         # 成交量单位：Tushare 'vol'是手，Qlib需要股，所以 * 100
-        # 使用 where 避免除以零的错误
         df['$volume'] = np.where(df['$factor'] != 0, (df['vol'] * 100) / df['$factor'], 0)
 
-        # 5. 格式化
+        # 6. 格式化
         df['datetime'] = pd.to_datetime(df['trade_date'], format='%Y%m%d')
         df['instrument'] = convert_ts_code_to_qlib_format(ts_code)
 
@@ -167,12 +175,13 @@ def save_to_hdf5(data, filename):
     if output_dir and not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    data.to_hdf(filename, key='data', mode='w', format='table', complevel=9, complib='zlib')
+    # 【关键修正】使用 'fixed' 格式以匹配原始文件的HDF5底层结构
+    data.to_hdf(filename, key='data', mode='w', format='fixed', complevel=9, complib='zlib')
     print(f"数据已成功保存到 {filename}")
 
 def main():
     """主函数"""
-    print("=== Tushare A股数据下载脚本 (V3 - 稳健重构版) ===")
+    print("=== Tushare A股数据下载脚本 (V4 - 复权逻辑修正版) ===")
     print(f"数据范围: {START_DATE} to {END_DATE}")
 
     pro = setup_tushare()
