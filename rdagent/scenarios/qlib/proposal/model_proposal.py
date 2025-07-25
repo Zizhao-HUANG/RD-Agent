@@ -208,6 +208,11 @@ class QlibModelHypothesis2Experiment(ModelHypothesis2Experiment):
         for experiment in experiment_list:
             model_list.extend(experiment.sub_tasks)
 
+        # 检查 last_experiment 的 stdout
+        if last_experiment is not None and hasattr(last_experiment, "stdout") and (last_experiment.stdout is None or last_experiment.stdout == ""):
+            import warnings
+            warnings.warn(f"[QlibModelHypothesis2Experiment] last_experiment.stdout is empty when rendering prompts! last_experiment: {last_experiment}")
+
         return {
             "target_hypothesis": str(hypothesis),
             "scenario": scenario,

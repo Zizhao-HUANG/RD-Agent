@@ -14,10 +14,10 @@ from rdagent.utils.agent.tpl import T
 
 
 class QlibFactorExperiment(FactorExperiment[FactorTask, QlibFBWorkspace, FactorFBWorkspace]):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args, initial_stdout=None, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.experiment_workspace = QlibFBWorkspace(template_folder_path=Path(__file__).parent / "factor_template")
-        self.stdout = ""
+        self.stdout = initial_stdout if initial_stdout is not None else ""
 
 
 class QlibFactorScenario(Scenario):

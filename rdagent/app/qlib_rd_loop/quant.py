@@ -108,14 +108,20 @@ class QuantRDLoop(RDLoop):
                 decision=False,
             )
             logger.log_object(feedback, tag="feedback")
-            self.trace.hist.append((prev_out["direct_exp_gen"]["exp_gen"], feedback))
+            exp = prev_out["direct_exp_gen"]["exp_gen"]
+            if hasattr(exp, "stdout") and (exp.stdout is None or exp.stdout == ""):
+                logger.warning(f"[QuantRDLoop] Experiment about to be added to trace.hist, but stdout is empty! exp: {exp}")
+            self.trace.hist.append((exp, feedback))
         else:
             if prev_out["direct_exp_gen"]["propose"].action == "factor":
                 feedback = self.factor_summarizer.generate_feedback(prev_out["running"], self.trace)
             elif prev_out["direct_exp_gen"]["propose"].action == "model":
                 feedback = self.model_summarizer.generate_feedback(prev_out["running"], self.trace)
             logger.log_object(feedback, tag="feedback")
-            self.trace.hist.append((prev_out["running"], feedback))
+            exp = prev_out["running"]
+            if hasattr(exp, "stdout") and (exp.stdout is None or exp.stdout == ""):
+                logger.warning(f"[QuantRDLoop] Experiment about to be added to trace.hist, but stdout is empty! exp: {exp}")
+            self.trace.hist.append((exp, feedback))
 
 
 def main(path=None, step_n=None, loop_n=None, all_duration=None, checkout=True):

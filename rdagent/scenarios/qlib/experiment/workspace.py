@@ -52,7 +52,10 @@ class QlibFBWorkspace(FBWorkspace):
             # Here, we ensure that the qlib experiment has run successfully before extracting information from execute_qlib_log using regex; otherwise, we keep the original experiment stdout.
             pattern = r"(Epoch\d+: train -[0-9\.]+, valid -[0-9\.]+|best score: -[0-9\.]+ @ \d+ epoch)"
             matches = re.findall(pattern, execute_qlib_log)
-            execute_qlib_log = "\n".join(matches)
+            if matches:
+                execute_qlib_log = "\n".join(matches)
+            else:
+                logger.warning(f"[QlibFBWorkspace] Regex did not match any log lines, using original execute_qlib_log.")
             return pd.read_csv(qlib_res_path, index_col=0).iloc[:, 0], execute_qlib_log
         else:
             logger.error(f"File {qlib_res_path} does not exist.")

@@ -82,11 +82,37 @@ class RDLoop(LoopBase, metaclass=LoopMeta):
                 decision=False,
             )
             logger.log_object(feedback, tag="feedback")
-            self.trace.hist.append((prev_out["direct_exp_gen"]["exp_gen"], feedback))
+            exp = prev_out["direct_exp_gen"]["exp_gen"]
+            # 检查 stdout
+            if hasattr(exp, "stdout") and (exp.stdout is None or exp.stdout == ""):
+                # 强制刷新 stdout
+                if hasattr(exp, "experiment_workspace") and hasattr(exp.experiment_workspace, "execute"):
+                    try:
+                        _, refreshed_stdout = exp.experiment_workspace.execute()
+                        exp.stdout = refreshed_stdout
+                        logger.info(f"[RDLoop] Refreshed experiment.stdout before adding to trace.hist.")
+                    except Exception as ex:
+                        logger.warning(f"[RDLoop] Failed to refresh experiment.stdout: {ex}")
+                if exp.stdout is None or exp.stdout == "":
+                    logger.warning(f"[RDLoop] Experiment about to be added to trace.hist, but stdout is empty! exp: {exp}")
+            self.trace.hist.append((exp, feedback))
         else:
             feedback = self.summarizer.generate_feedback(prev_out["running"], self.trace)
             logger.log_object(feedback, tag="feedback")
-            self.trace.hist.append((prev_out["running"], feedback))
+            exp = prev_out["running"]
+            # 检查 stdout
+            if hasattr(exp, "stdout") and (exp.stdout is None or exp.stdout == ""):
+                # 强制刷新 stdout
+                if hasattr(exp, "experiment_workspace") and hasattr(exp.experiment_workspace, "execute"):
+                    try:
+                        _, refreshed_stdout = exp.experiment_workspace.execute()
+                        exp.stdout = refreshed_stdout
+                        logger.info(f"[RDLoop] Refreshed experiment.stdout before adding to trace.hist.")
+                    except Exception as ex:
+                        logger.warning(f"[RDLoop] Failed to refresh experiment.stdout: {ex}")
+                if exp.stdout is None or exp.stdout == "":
+                    logger.warning(f"[RDLoop] Experiment about to be added to trace.hist, but stdout is empty! exp: {exp}")
+            self.trace.hist.append((exp, feedback))
 
         return feedback
 
