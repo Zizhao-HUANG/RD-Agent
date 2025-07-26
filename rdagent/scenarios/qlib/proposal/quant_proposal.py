@@ -105,43 +105,43 @@ class QlibQuantHypothesisGen(FactorAndModelHypothesisGen):
                 "Proxy for Investment Style Profile", "Proxy for Systemic Risk Contribution & Connectivity"
             ]
             
-            # Phase 1: Initial Scan (Rounds 0-4, 5 experiments total)
-            if num_factor_experiments < 5:
+            # Phase 1: Initial Scan (Rounds 0-14, 15 experiments total)
+            if num_factor_experiments < 15:
                 qaunt_rag = f"""
-                **Phase 1: Initial Scan (Round {num_factor_experiments + 1}/5).**
-                **Goal:** Generate one baseline factor for each of the 15 conceptual categories.
-                - **Your Task:** Propose **3 factors**. Each factor must come from a **different category** that has not been covered in previous rounds of this phase.
-                - **Constraint:** The proposed factors must be **simple and easy to code**. We are prioritizing breadth and speed.
+                **Phase 1: Initial Scan (Round {num_factor_experiments + 1}/15).**
+                **Goal:** Generate one baseline factor for each of the 15 conceptual categories, one per round.
+                - **Your Task:** Propose **1 factor**. The factor must come from a category that has not been covered yet in this phase.
+                - **Constraint:** The proposed factor must be **simple and easy to code**. We are prioritizing breadth and speed.
                 - **Reference List of Categories:** {FACTOR_CATEGORIES}
                 """
-            # Phase 2: First Optimization Pass (Rounds 5-9, 5 experiments total)
-            elif num_factor_experiments < 10:
+            # Phase 2: First Optimization Pass (Rounds 15-29, 15 experiments total)
+            elif num_factor_experiments < 30:
                 qaunt_rag = f"""
-                **Phase 2: First Optimization Pass (Round {num_factor_experiments - 4}/5).**
-                **Goal:** Systematically optimize the 15 baseline factors created in Phase 1.
-                - **Your Task:** Review the feedback from the first 5 factor experiments (Phase 1). Select **3 different factors** from that initial set and propose a specific optimization for each based on the results.
+                **Phase 2: First Optimization Pass (Round {num_factor_experiments - 14}/15).**
+                **Goal:** Systematically optimize the 15 baseline factors created in Phase 1, one per round.
+                - **Your Task:** Review the feedback from the Phase 1 experiments. Select **1 factor** from that initial set and propose a specific optimization for it based on the results.
                 - **Constraint:** Focus on refining the original 15 ideas. Do not introduce entirely new concepts yet.
                 """
-            # Phase 3: Deep Optimization of High-Potential Factors (Rounds 10-14, 5 experiments total)
-            elif num_factor_experiments < 15: # Changed from == 10 to < 15
+            # Phase 3: Deep Optimization of High-Potential Factors (Rounds 30-34, 5 experiments total)
+            elif num_factor_experiments < 35:
                 qaunt_rag = f"""
-                **Phase 3: Deep Optimization of High-Potential Factors (Round {num_factor_experiments - 9}/5).**
+                **Phase 3: Deep Optimization of High-Potential Factors (Round {num_factor_experiments - 29}/5).**
                 **Goal:** Systematically enhance the most promising factors from the first two phases.
                 - **Your Task:** In each of these 5 rounds, analyze the performance of factors from Phases 1 & 2, and the ongoing optimizations within Phase 3. Select the **top 3-5 factors** that show the highest potential for alpha. Propose **advanced optimizations** for these selected factors.
                 - **Constraint:** You can **significantly increase complexity** to capture deeper, more nuanced features. Focus on quality and impact. The number of factors you optimize in each round is flexible, but aim for a focused effort on the most promising ones.
                 """
-            # Phase 4: Focused Iterative Enhancement (Rounds 15-19, 5 experiments total)
-            elif num_factor_experiments < 20: # Changed from < 16 to < 20
+            # Phase 4: Focused Iterative Enhancement (Rounds 35-39, 5 experiments total)
+            elif num_factor_experiments < 40:
                 qaunt_rag = f"""
-                **Phase 4: Focused Iterative Enhancement (Round {num_factor_experiments - 14}/5).**
+                **Phase 4: Focused Iterative Enhancement (Round {num_factor_experiments - 34}/5).**
                 **Goal:** Further polish the high-potential factors identified and enhanced in Phase 3.
                 - **Your Task:** Based on the comprehensive results from Phase 3, select a subset of those factors that show promise for even further improvement. Propose **3 new optimizations** for them.
                 - **Constraint:** Continue to **increase complexity if necessary**. This could involve creating more sophisticated interactions, applying non-linear transformations, or making them regime-aware.
                 """
-            # Phase 5: Unrestricted Deep Dive (Round 20 onwards)
+            # Phase 5: Unrestricted Deep Dive (Round 40 onwards)
             else:
                 qaunt_rag = f"""
-                **Phase 5: Unrestricted Deep Dive (Round {num_factor_experiments - 19}).**
+                **Phase 5: Unrestricted Deep Dive (Round {num_factor_experiments - 39}).**
                 **Goal:** Synthesize all learnings and achieve a breakthrough in alpha discovery by thinking from first principles.
                 - **Your Task:** The structured research phases are complete. You now have full creative freedom. Deeply analyze the entire experimental history to understand what has worked and what has failed. Then, step back and formulate your boldest hypotheses by drawing inspiration from fundamental disciplines.
                 - **Constraint:** **There are no restrictions.** Your objective is to invent the next State-of-the-Art alpha by proposing a novel, core insight about market behavior.
