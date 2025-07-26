@@ -180,3 +180,13 @@ videos/
 static/
 
 all_daily_from_tushare.csv
+
+cn_data_complete_qlib/
+cn_data_backup_20250726_050017/
+cn_data_full_qlib/
+cn_data_updated/
+cn_data_updated_final/
+create_index_files.py
+final_verification.py
+fix_csi300_constituents.py
+stock_data/
