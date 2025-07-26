@@ -39,7 +39,7 @@ warnings.filterwarnings(
 
 # --- 配置区 ---
 # 请将 "your_token_here" 替换为你的真实 Tushare Token
-TUSHARE_TOKEN = "1328e862dc870cf716f9527a5b5f8623909cd80e14d990cb42a7bbb6"
+TUSHARE_TOKEN = "xxx"
 START_DATE = '19990101'
 END_DATE = datetime.now().strftime('%Y%m%d')
 OUTPUT_FILENAME = "daily_pv_tushare_rebuilt_v4.h5"
