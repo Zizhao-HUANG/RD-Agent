@@ -269,22 +269,6 @@ factor_experiment_output_format: |-
               "variable or function name 1": "description of variable or function 1",
               "variable or function name 2": "description of variable or function 2"
           }
-      },
-      "factor name 2": {
-          "description": "description of factor 2, start with its type, e.g. [Machine Learning based Factor]",
-          "formulation": "latex formulation of factor 2",
-          "variables": {
-              "variable or function name 1": "description of variable or function 1",
-              "variable or function name 2": "description of variable or function 2"
-          }
-      },
-      "factor name 3": {
-          "description": "description of factor 3, start with its type, e.g. [Value Factor]",
-          "formulation": "latex formulation of factor 3",
-          "variables": {
-              "variable or function name 1": "description of variable or function 1",
-              "variable or function name 2": "description of variable or function 2"
-          }
       }
       # Don't add ellipsis (...) or any filler text that might cause JSON parsing errors here!
   }
