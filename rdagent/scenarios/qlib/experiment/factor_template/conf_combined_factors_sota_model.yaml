@@ -47,7 +47,7 @@ data_handler_config: &data_handler_config
               fields_group: feature
     learn_processors:
         - class: DropnaLabel
-        - class: CSRankNorm
+        - class: CSZScoreNorm
           kwargs:
               fields_group: label
 
@@ -61,7 +61,7 @@ port_analysis_config: &port_analysis_config
             n_drop: 5
     backtest:
         start_time: 2017-01-01
-        end_time: 2020-09-03
+        end_time: 2020-08-01
         account: 100000000
         benchmark: *benchmark
         exchange_kwargs:
@@ -83,7 +83,7 @@ task:
             weight_decay: {{ weight_decay }}
             metric: loss
             loss: mse
-            n_jobs: 0
+            n_jobs: 20
             GPU: 0
             pt_model_uri: "model.model_cls"
             pt_model_kwargs: {
@@ -100,7 +100,7 @@ task:
             segments:
                 train: [2008-01-01, 2014-12-31]
                 valid: [2015-01-01, 2016-12-31]
-                test: [2017-01-01, 2020-09-03]
+                test: [2017-01-01, 2020-08-01]
             {% if step_len %}step_len: {{ step_len }}{% endif %}
     record: 
         - class: SignalRecord
