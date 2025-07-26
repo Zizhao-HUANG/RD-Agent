@@ -9,7 +9,7 @@ import h5py
 import numpy as np
 from collections import Counter
 
-FILE_PATH = "/home/shenzi/RD-Agent/daily_pv_tushare_rebuilt_v4.h5"
+FILE_PATH = "/home/shenzi/RD-Agent/daily_pv_qfq_standard_v6.h5"
 
 print("=== 1. HDF5 文件结构检查 ===")
 with h5py.File(FILE_PATH, 'r') as f:

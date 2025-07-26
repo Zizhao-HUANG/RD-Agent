@@ -21,7 +21,7 @@
     -   在并行下载结束后，检查核心股票（如贵州茅台）是否下载成功。
     -   如果失败，则进行一次独立的、强制的串行下载重试，最大限度保证数据完整性。
 
-3.  [兼容性] 保持V5版本所有优点：
+3.  [兼容性] 保持V5版本所有优点
     -   严格采用前复权(qfq)逻辑。
     -   成交量根据前复权因子正确调整。
     -   强大的并行下载、API速率控制和重试引擎。
@@ -40,15 +40,15 @@ import threading
 import warnings
 
 # --- 配置区 ---
-TUSHARE_TOKEN = "your_token_here"
+TUSHARE_TOKEN = "58ae7ff4258e6476a0e76b0acd9cfacabee1664b87702f39c739254c"
 START_DATE = '19990101'
-END_DATE = datetime.now().strftime('%Y%m%d')
+END_DATE = '20250725'
 OUTPUT_FILENAME = "daily_pv_qfq_standard_v6.h5" # 使用新文件名以避免混淆
 QLIB_COLUMN_ORDER = ['$open', '$close', '$high', '$low', '$volume', '$factor']
 
 # --- 性能与API控制参数 ---
 API_CALLS_PER_MINUTE = 200
-MAX_WORKERS = 10
+MAX_WORKERS = 14
 API_DELAY = 60.0 / API_CALLS_PER_MINUTE
 API_SEMAPHORE = threading.Semaphore(MAX_WORKERS)
 

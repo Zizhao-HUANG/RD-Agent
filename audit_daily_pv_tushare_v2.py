@@ -112,7 +112,7 @@ def audit_data(filepath):
     print(df.tail())
     print("\n--- 贵州茅台 (SH600519) 最新数据 ---")
     try:
-        print(df.loc[(slice(None), 'SH600519')].tail())
+        print(df.loc[(slice(None), '600519.SH')].tail())
     except KeyError:
         print("[WARNING] 未在数据中找到 'SH600519' (贵州茅台)。")
 
