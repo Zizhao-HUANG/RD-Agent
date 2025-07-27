@@ -66,15 +66,34 @@ task:
         class: LGBModel
         module_path: qlib.contrib.model.gbdt
         kwargs:
+            # [核心优化] 采用更小学习率和更多树，进行精细化学习
+            learning_rate: 0.02
+            n_estimators: 2000  # 大幅增加树的数量，与低学习率配合
+
+            # [核心优化] 提升模型复杂度，充分利用内存优势
+            num_leaves: 1023    # 显著增加叶子节点数，捕捉更复杂模式 (2^10 - 1)
+            max_depth: 12       # 适当增加最大深度，允许树更深
+
+            # [核心优化] 充分利用顶级CPU的并行计算能力
+            num_threads: -1     # 设置为-1，自动使用所有可用核心。您也可以手动设置为物理核心数，如64或96
+
+            # [优化] 调整数据和特征采样，增加随机性，防止过拟合
+            subsample: 0.8
+            colsample_bytree: 0.8
+
+            # [优化] 随着学习率降低，相应减弱正则化强度
+            lambda_l1: 1.0
+            lambda_l2: 1.0
+
+            # [最佳实践] 增加早停机制，防止过拟合，节约训练时间
+            early_stopping_rounds: 50 # 在验证集上连续50轮性能无提升则停止训练
+
+            # [最佳实践] 设定随机种子以保证实验可复现
+            seed: 42
+            
+            # loss在Qlib的LGBModel中是默认参数，但为清晰起见保留
             loss: mse
-            colsample_bytree: 0.8879
-            learning_rate: 0.2
-            subsample: 0.8789
-            lambda_l1: 205.6999
-            lambda_l2: 580.9768
-            max_depth: 8
-            num_leaves: 210
-            num_threads: 20
+
     dataset:
         class: DatasetH
         module_path: qlib.data.dataset
