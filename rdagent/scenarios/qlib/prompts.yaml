@@ -460,8 +460,11 @@ factor_feedback_generation:
     {% endfor %}
     Combined Results:
     {{ combined_result }}
+    {% if exp is defined and exp.stdout is defined %}
     Training Log:
     {{ exp.stdout }}
+    {% endif %}
+
 
     Analyze the combined result and the training log in the context of its ability to:
     1. Support or refute the hypothesis.
