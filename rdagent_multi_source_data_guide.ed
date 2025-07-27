@@ -1,0 +1,66 @@
+# RD-Agent 多源数据整合保姆级教程
+
+## 引言：为何需要多源数据？
+仅依赖 OHLCV 等价格数据难以全面刻画资产的基本面。通过引入财报、新闻或宏观指标等更多数据，可以让模型学习到与市场行情不同维度的信息，从而提升策略的稳健性和收益率。`rdagent` 已深度集成 `qlib`，可在自定义数据处理后直接加载这些额外的特征。
+
+## 第一部分：数据准备与处理 (Qlib 层)
+### 1. 理解 Qlib 数据格式
+`qlib` 使用 HDF5 文件统一存储所有特征，路径通常位于 `~/.qlib/qlib_data/cn_data`。每条记录必须同时包含 `instrument` 与 `datetime` 两个索引，`qlib` 才能正确加载。
+
+### 2. 定位数据处理工具
+在 `rdagent` 项目中，`scripts/data_collector/` 目录提供了官方的数据处理脚本，可根据外部文件生成 Qlib 格式的数据。
+
+### 3. 实战：处理自有财务数据
+1. **准备原始数据**
+   假设你有 `my_financial_data.csv`，包含字段 `code`, `date`, `pe_ratio`, `roe` 等。示例：
+   ```csv
+   code,date,pe_ratio,roe
+   000001,2023-12-31,8.5,0.12
+   000002,2023-12-31,7.2,0.09
+   ```
+2. **修改并运行处理脚本**
+   在 `scripts/data_collector/` 下新建或修改脚本，读取 CSV 并倾倒到 Qlib：
+   ```python
+   import pandas as pd
+   from qlib.data import D
+
+   df = pd.read_csv("my_financial_data.csv")
+   df["instrument"] = df["code"]
+   df["datetime"] = pd.to_datetime(df["date"])
+   df = df.set_index(["datetime", "instrument"])
+
+   # 保存为 qlib 标准格式
+   D.dump_features(df[["pe_ratio", "roe"]],
+                   feature_path="~/.qlib/qlib_data/cn_data/my_fin_features.h5")
+   print("财务数据处理完成！")
+   ```
+3. **验证结果**
+   处理完成后运行：
+   ```bash
+   ls -l ~/.qlib/qlib_data/cn_data/features/
+   ```
+   应能看到 `my_fin_features.h5` 文件。
+
+## 第二部分：在 rdagent 中配置并使用新数据
+### 1. 定义新的因子表达式
+打开 `rdagent/scenarios/qlib/experiment/factor_template/conf_combined_factors_sota_model.yaml`，在 `factors:` 列表下添加：
+```yaml
+  - &PE_FACTOR "Ref($pe_ratio, 20)"
+  - &ROE_FACTOR "$roe"
+```
+`$` 表示直接引用特征名，`Ref()` 可取历史窗口中的值。
+
+### 2. 将新因子送入模型
+编辑 `rdagent/scenarios/qlib/experiment/model_template/conf_sota_factors_model.yaml`，找到 `data_handler_config` → `feature_config` → `features`，把 `*PE_FACTOR` 和 `*ROE_FACTOR` 追加到该列表。
+
+## 第三部分：运行与验证
+1. **启动流程**
+   在项目根目录执行：
+   ```bash
+   rdagent fin_quant
+   ```
+2. **检查日志**
+   运行结束后查看 `log/` 目录的最新日志，搜索 `PE_FACTOR`、`ROE_FACTOR` 以确认新因子被读取。比较回测报告以评估性能提升。
+
+## 结论与进阶
+本教程流程：准备原始数据 → Qlib 脚本处理 → YAML 配置 → 运行验证。基于此思路，你还可以以相同方式处理新闻情绪、宏观经济指标等多种数据源。更多高级算子和处理技巧请参阅 `qlib` 官方文档。
