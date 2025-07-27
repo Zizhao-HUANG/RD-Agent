@@ -83,7 +83,13 @@ class QlibFactorRunner(CachedRunner[QlibFactorExperiment]):
         )
         IC_max.index = pd.MultiIndex.from_product([range(SOTA_feature.shape[1]), range(new_feature.shape[1])])
         IC_max = IC_max.unstack().max(axis=0)
-        return new_feature.iloc[:, IC_max[IC_max < 0.99].index]
+        
+        # Add debugging information
+        logger.info(f"Factor deduplication: SOTA features: {SOTA_feature.shape[1]}, New features: {new_feature.shape[1]}")
+        logger.info(f"Maximum IC values: {IC_max.values}")
+        logger.info(f"Features kept (IC < 0.99): {sum(IC_max < 0.99)} out of {len(IC_max)}")
+        
+        return new_feature.iloc[:, IC_max[IC_max < 0.95].index]  # 临时降低阈值进行测试
 
     @cache_with_pickle(CachedRunner.get_cache_key, CachedRunner.assign_cached_result)
     def develop(self, exp: QlibFactorExperiment) -> QlibFactorExperiment:

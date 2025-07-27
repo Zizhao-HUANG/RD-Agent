@@ -60,7 +60,7 @@ class RDAgentSettings(ExtendedBaseSettings):
     multi_proc_n: int = 1
 
     # pickle cache conf
-    cache_with_pickle: bool = True  # whether to use pickle cache
+    cache_with_pickle: bool = False  # whether to use pickle cache - 临时禁用进行测试
     pickle_cache_folder_path_str: str = str(
         Path.cwd() / "pickle_cache/",
     )  # the path of the folder to store the pickle cache

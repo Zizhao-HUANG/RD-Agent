@@ -206,3 +206,6 @@ daily_pv_output_v2.txt
 daily_pv_output.txt
 data_sample_complete.txt
 data_sample_final.txt
+rdagent/scenarios/qlib/experiment/factor_data_template/daily_pv_all.h5.backup
+daily_pv_all.h5.backup
+daily_pv_default_complete.txt
