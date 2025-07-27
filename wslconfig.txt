@@ -1,0 +1,18 @@
+# WSL2 GPU支持配置
+# 将此文件保存为 %USERPROFILE%\.wslconfig
+
+[wsl2]
+# 启用GPU支持
+gpuSupport=true
+
+# 内存配置
+memory=8GB
+
+# 处理器配置
+processors=4
+
+# 交换配置
+swap=2GB
+
+# 本地主机转发
+localhostForwarding=true

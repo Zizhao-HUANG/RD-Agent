@@ -87,7 +87,7 @@ class QlibFactorRunner(CachedRunner[QlibFactorExperiment]):
         # Add debugging information
         logger.info(f"Factor deduplication: SOTA features: {SOTA_feature.shape[1]}, New features: {new_feature.shape[1]}")
         logger.info(f"Maximum IC values: {IC_max.values}")
-        logger.info(f"Features kept (IC < 0.99): {sum(IC_max < 0.99)} out of {len(IC_max)}")
+        logger.info(f"Features kept (IC < 0.95): {sum(IC_max < 0.95)} out of {len(IC_max)}")
         
         return new_feature.iloc[:, IC_max[IC_max < 0.95].index]  # 临时降低阈值进行测试
 
