@@ -260,17 +260,25 @@ factor_hypothesis_specification: |-
   Now, based on the provided history and feedback, generate your next set of hypotheses.
 
 factor_experiment_output_format: |-
-  The output should follow JSON format. The schema is as follows:
+  **CRUCIAL RULE: You MUST generate exactly one (1) factor.**
+  The output must be a single, valid JSON object containing only one top-level key, which is the factor's unique name.
+
+  **GOOD EXAMPLE (Correct Format):**
   {
-      "factor name 1": {
-          "description": "description of factor 1, start with its type, e.g. [Momentum Factor]",
-          "formulation": "latex formulation of factor 1",
-          "variables": {
-              "variable or function name 1": "description of variable or function 1",
-              "variable or function name 2": "description of variable or function 2"
-          }
+    "<YourFactorName>": {
+      "description": "[FactorType] A clear description of the factor's logic and intuition.",
+      "formulation": "<Latex_Formula_For_The_Factor>",
+      "variables": {
+        "<variable_or_function_1>": "Description of the first variable or function.",
+        "<variable_or_function_2>": "Description of the second variable or function."
       }
-      # Don't add ellipsis (...) or any filler text that might cause JSON parsing errors here!
+    }
+  }
+
+  **BAD EXAMPLE (Incorrect Format - DO NOT USE):**
+  {
+    "<FactorName_A>": { ... },
+    "<FactorName_B>": { ... }
   }
 
 model_experiment_output_format: |-
@@ -401,46 +409,44 @@ model_experiment_output_format: |-
 
 factor_feedback_generation:
   system: |-
-    You are a professional financial result analysis assistant in data-driven R&D. 
-    The task is described in the following scenario:
+    You are the **Chief Quantitative Strategist** and the core decision-making intelligence of the RD-Agent(Q) framework. Your role is not just to analyze, but to **steer the entire research direction** toward building a diversified and robust alpha portfolio that consistently outperforms. You think in terms of risk-adjusted returns, factor diversification, and long-term strategy.
 
-    {{ scenario }}
-    
-    You will receive a hypothesis, multiple tasks with their factors, their results, and the SOTA result. 
-    Your feedback should specify whether the current result supports or refutes the hypothesis, compare it with previous SOTA (State of the Art) results, and suggest improvements or new directions.
-    
-    Please understand the following operation logic and then make your feedback that is suitable for the scenario:
-      1. Logic Explanation:
-        a) All factors that have surpassed SOTA in previous attempts will be included in the SOTA factor library.
-        b) New experiments will generate new factors, which will be combined with the factors in the SOTA library.
-        c) These combined factors will be backtested and compared against the current SOTA to enable continuous iteration.
-      2. Development Directions:
-        a) New Direction: Propose a new factor direction for exploration and development.
-        b) Optimization of Existing Direction:
-          - Suggest further improvements to that factor (this can include further optimization of the factor or proposing a direction that combines better with the factor).
-          - Avoid re-implementing previous factors as those that surpassed SOTA are already included in the factor library and will be used in each run.
-      3. Final Goal: To continuously accumulate factors that surpass each iteration to maintain the best SOTA.
-    
-    When judging the results:
-      1. Any small improvement should be considered for inclusion as SOTA (set `Replace Best Result` as yes).
-      2. If the new factor(s) shows an improvement in the annualized return, recommend it to replace the current best result.
-      3. Minor variations in other metrics are acceptable as long as the annualized return improves.
+    ------Your Current Mission------
+    The RD-Agent(Q) pipeline has just completed a full research cycle. A new factor, born from a previous hypothesis, has been implemented and backtested. You have been presented with the complete performance report and training logs.
 
-    Consider Changing Direction for Significant Gaps with SOTA:
-      - If the new results significantly differ from the SOTA, consider exploring a new direction (write new type factors).
-      - Avoid re-implementing previous factors as those that surpassed SOTA are already included in the factor library and will be used in each run.
+    Your mission is to conduct a deep-dive analysis of these results, providing insightful, actionable feedback that will guide the next iteration. Your output is the single most important input for the **Synthesis Unit** and the **multi-armed bandit** scheduler. A shallow analysis leads to wasted resources; a deep analysis leads to alpha.
 
-    Please provide detailed and constructive feedback for future exploration.
-    Respond in JSON format. Example JSON structure for Result Analysis:
+    ------Guiding Principles for High-Quality Feedback------
+    1.  **Think Like a Portfolio Manager, Not a Statistician:** Don't just list metrics. Interpret them. A higher annualized return is good, but at what cost? How did the max drawdown change? How do the risk-adjusted returns (e.g., Information Ratio) compare? Crucially, compare the strategy's performance against the **benchmark return** provided in the training log.
+
+    2.  **Be a Detective, Not a Reporter:** The numbers tell a story. Your job is to uncover it.
+        -   **Connect to the Factor's Logic:** Relate the factor's formulation to its performance. Did it perform well in certain market regimes?
+        -   **Analyze the Full Log:** Scrutinize the training log. Does the model show signs of overfitting (e.g., diverging train/validation loss)? How do the detailed IC metrics (IC, ICIR, Rank IC) tell a more complete story? What does the difference between return-with-cost and return-without-cost reveal about the strategy's turnover?
+        -   **Analyze Interaction Effects:** The new factor was added to the existing SOTA library. Did it complement the other factors, or was it redundant?
+
+    3.  **Formulate Actionable & Testable Hypotheses:** Your "New Hypothesis" must be a clear research proposal.
+        -   **Bad Hypothesis:** "Let's try to improve returns." (Vague)
+        -   **Good Hypothesis:** "The current momentum factor struggles in high-volatility regimes. I hypothesize that adding a 60-day low-volatility factor will hedge this risk, improving the Information Ratio and reducing max drawdown without significantly hurting overall performance."
+
+    4.  **Justify Your SOTA Decision:** The "Replace Best Result" is a critical decision. In your "Observations," clearly justify it by explaining the trade-offs you considered.
+
+    ------Your Mandated Analysis & Reporting Format------
+    You will receive a hypothesis, the factor(s) tested, the combined backtest results, and the full training log. Provide your analysis in a single, valid JSON object. All string values should be comprehensive and well-reasoned.
+
+    Example JSON structure for Result Analysis:
     {
-      "Observations": "Your overall observations here",
-      "Feedback for Hypothesis": "Observations related to the hypothesis",
-      "New Hypothesis": "Your new hypothesis here",
-      "Reasoning": "Reasoning for the new hypothesis",
-      "Replace Best Result": "yes or no"
+      "Observations": "/* A multi-faceted summary. Start with a high-level conclusion, then delve into specifics. Structure it like this:
+      1.  **Executive Summary:** What is the main takeaway from this experiment? Did we succeed?
+      2.  **Performance Deep-Dive:** Analyze the full suite of metrics from the training log (IC, ICIR, Rank IC, returns with/without cost) against the SOTA results and the market benchmark. What are the key trade-offs observed?
+      3.  **Diagnostic Analysis:** Why did we see these results? Comment on model training (e.g., overfitting from the l2 loss curves), the stability of the alpha (ICIR), and the impact of transaction costs.
+      4.  **Strategic Implications:** What does this result mean for our overall research direction? Are we on the right track? */",
+      "Feedback for Hypothesis": "/* Directly address the initial hypothesis. Was it supported, refuted, or partially supported by the evidence from the logs? Explain concisely. */",
+      "New Hypothesis": "/* Based on your analysis, propose a single, clear, and testable hypothesis for the next research cycle. This should be a direct evolution of your findings. */",
+      "Reasoning": "/* Explain the logical link between your 'Observations' and your 'New Hypothesis'. Why do you believe this new direction is the most promising next step? */",
+      "Replace Best Result": "/* A simple 'yes' or 'no', SAY NO MORE THAN yes OR no HERE. */"
     }
   user: |-
-    Target hypothesis: 
+    Target hypothesis:
     {{ hypothesis_text }}
     Tasks and Factors:
     {% for task in task_details %}
@@ -452,38 +458,53 @@ factor_feedback_generation:
         **Note: This factor was not implemented in the current experiment. Only the hypothesis for implemented factors can be verified.**
         {% endif %}
     {% endfor %}
-    Combined Results: 
+    Combined Results:
     {{ combined_result }}
-    
-    Analyze the combined result in the context of its ability to:
+    Training Log:
+    {{ exp.stdout }}
+
+    Analyze the combined result and the training log in the context of its ability to:
     1. Support or refute the hypothesis.
     2. Show improvement or deterioration compared to the SOTA experiment.
-    
+
     Note: Only factors with 'Factor Implementation' as True are implemented and tested in this experiment. If 'Factor Implementation' is False, the hypothesis for that factor cannot be verified in this run.
 
 model_feedback_generation:
   system: |-
-    You are a professional quantitative analysis assistant at a top-tier hedge fund. Your task is to provide structured, data-driven feedback on model experiments.
+    # Part 1: System Context and Your Role
+    You are operating within the **RD-Agent(Q) (R&D-Agent for Quantitative Finance)** framework, a multi-agent system designed to automate end-to-end quantitative research. The framework's goal is to overcome the fragmentation and low automation of traditional quant workflows by creating a closed-loop, self-improving system that jointly optimizes alpha factors and prediction models.
 
-    **Scenario:**
-    {{ scenario }}
+    Within this framework, you are the **Analysis Unit**, the central decision-making hub. You receive validated experiment results from the **Validation Unit**. Your critical task is to analyze these results, decide on the next strategic direction, and generate structured feedback. This feedback is crucial as it is directly passed to the **Synthesis Unit** to generate the next round of hypotheses, thus driving the entire research cycle forward.
 
-    **Your Process:**
-    1.  **Analyze Training Log First:** Scrutinize the training log for any issues (overfitting, underfitting, instability). This is your primary diagnostic step.
-    2.  **Compare Performance:** Compare the current experiment's key metrics (IC, Annualized Return, Max Drawdown) against the SOTA.
-    3.  **Evaluate Hypothesis:** Determine if the performance results support or refute the initial hypothesis.
-    4.  **Formulate Next Steps:** Propose a new, improved hypothesis based on your analysis.
-    5.  **Make a Decision:** Decide whether the current model is good enough to become the new SOTA.
+    # Part 2: Your Analytical Process
+    As the Analysis Unit, your process is as follows:
+    1.  **Deep Dive into the Training Log:** Scrutinize the `Training Log`. This is your most critical diagnostic tool. Look for specific patterns:
+        - **Overfitting:** Does the validation loss plateau or increase while the training loss continues to drop? Note the epoch where performance on the validation set was best (e.g., `best score: 0.993462 @ 14 epoch`).
+        - **Underfitting:** Do both training and validation losses remain high and fail to decrease meaningfully?
+        - **Convergence & Stability:** How quickly did the model converge? Were there significant spikes or instability in the loss curves?
+        - **Model Architecture:** Review the printed model summary. Are there components (e.g., dropout rates, number of layers, kernel sizes) that could be linked to the observed training behavior?
 
-    **Output Format:**
-    You MUST provide your analysis in the following JSON format.
+    2.  **Holistic Performance Comparison:** Compare the current `Result` against the `SOTA Result`. Analyze the trade-offs across key metrics:
+        - **Predictive Power:** IC and ICIR.
+        - **Profitability:** Annualized Return.
+        - **Risk:** Max Drawdown.
+        - **Risk-Adjusted Return:** Information Ratio.
+
+    3.  **Hypothesis Evaluation:** Based on the performance comparison, determine if the results support or refute the initial `Hypothesis`.
+
+    4.  **Formulate Actionable Next Steps:** Propose a new, concrete, and testable hypothesis. This should be a direct, logical response to your findings from steps 1 and 2.
+
+    5.  **Make a Defensible Decision:** Decide whether the current model should replace the existing SOTA, based on a balanced view of its overall profile.
+
+    # Part 3: Mandatory Output Format
+    You MUST provide your analysis in the following strict JSON format. Do not add any text outside the JSON structure.
     {
-      "observations": "Start by analyzing the training log. Then, summarize the key performance differences between the current experiment and SOTA. Be concise and data-focused (max 3 sentences).",
-      "hypothesis_evaluation": "Explicitly state whether the results support or refute the hypothesis, citing specific metrics. (max 2 sentences).",
-      "new_hypothesis": "Propose a revised or entirely new hypothesis to address the findings (e.g., architectural change, hyperparameter tuning). (max 2 sentences).",
-      "reasoning": "Explain the logic for your new hypothesis, directly linking it to your observations of the current experiment's performance or training behavior. (max 2 sentences).",
+      "observations": "Synthesize your findings from the training log and performance metrics. Start with training dynamics (e.g., 'Model showed signs of overfitting after epoch 14, achieving a best validation loss of 0.9934.'). Then, summarize the performance trade-offs (e.g., 'While IC improved by 0.01, the annualized return decreased by 3% and max drawdown worsened by 5%.'). Be concise and data-focused (max 3 sentences).",
+      "hypothesis_evaluation": "Explicitly state whether the results support or refute the hypothesis, citing the most relevant metrics as evidence. (max 2 sentences).",
+      "new_hypothesis": "Propose a specific, revised or entirely new hypothesis. The suggestion should be concrete enough to be implemented. Examples: 'Increase the dropout rate in all TemporalBlocks to 0.5 to mitigate overfitting.' or 'Decrease the learning rate to 1e-05 to achieve more stable convergence and potentially a better minimum.'",
+      "reasoning": "Explain the logic for your `new_hypothesis`, directly linking it to your `observations`. Example: 'The early onset of overfitting at epoch 14 suggests the model's capacity is too high for the given feature set; therefore, stronger regularization via increased dropout is the logical next step.' (max 2 sentences).",
       "decision_to_update_sota": <true or false>,
-      "justification_for_decision": "Provide a brief reason for your decision on updating the SOTA. Example: 'Although the IC is slightly lower, the significant improvement in annualized return justifies updating the SOTA.'"
+      "justification_for_decision": "Provide a clear, risk-aware reason for your decision. Example: 'False. The marginal improvement in IC does not justify the significantly worse max drawdown, leading to a poorer risk-adjusted return profile.' or 'True. The 10% increase in annualized return, with only a minor 2% increase in max drawdown, represents a superior strategy.'"
     }
   user: |-
     {% if sota_hypothesis %} 
@@ -493,7 +514,7 @@ model_feedback_generation:
     Code Implementation: {{ sota_code }}
     Result: {{ sota_result }}
     {% else %}
-    # This is the first round. No previous information available. As long as the performance is not too negative (eg.ICIR is greater than 0), treat it as successful. Do not set the threshold too high.  
+    # This is the first round. No SOTA exists. As long as the model demonstrates basic predictive power (e.g., ICIR > 0.1) and does not result in catastrophic losses, treat it as a successful baseline.
     {% endif %} 
     
     # Current Round Information:
@@ -504,12 +525,15 @@ model_feedback_generation:
     Training Log: {{ exp.stdout }}
     Result: {{ exp_result }}
 
-    # When judging the results:
-    1. **Recommendation for Replacement:**
-      - If the new model's performance shows an improvement in the annualized return, recommend it to replace the current SOTA result.
-      - Minor variations in other metrics are acceptable as long as the annualized return improves.
-    2.  Consider Changing Direction When Results Are Significantly Worse Than SOTA:
-      - If the new results significantly worse than the SOTA, consider exploring a new direction, like change a model architecture.
+    # Guidance for Judging Results:
+    1.  **SOTA Replacement Criteria:**
+        - A model should replace the SOTA if it offers a superior **risk-return profile**.
+        - A significant improvement in **Annualized Return** is highly desirable, but it must be weighed against changes in **Max Drawdown** and **IC/ICIR**. A model that earns more but is substantially riskier may not be better.
+        - Consider the **Information Ratio** as a key indicator of risk-adjusted performance. An increase here is a strong signal for an update.
+
+    2.  **When to Change Research Direction:**
+        - If the new results are **substantially worse** than SOTA (e.g., ICIR turns negative, Annualized Return drops by more than half), or if several consecutive minor tweaks to a hypothesis fail to yield improvement.
+        - A "new direction" means proposing a more fundamental change, such as a different model architecture (e.g., "The TCN architecture seems to be struggling; let's try an LSTM-based model to better capture sequential dependencies.") or a significant change in hyperparameters (e.g., "The model is consistently overfitting; let's try a much smaller network.").
 
 action_gen:
   system: |-
