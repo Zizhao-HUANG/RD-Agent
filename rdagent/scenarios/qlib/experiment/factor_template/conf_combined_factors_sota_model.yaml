@@ -17,7 +17,7 @@ data_handler_config: &data_handler_config
                   kwargs:
                     config:
                         label: 
-                            - ["Ref($close, -2)/Ref($close, -1) - 1"]
+                            - ["Ref($close, -6)/Ref($close, -1) - 1"]
                             - ["LABEL0"]
                         feature:
                             - ["Resi($close, 5)/$close", "Std(Abs($close/Ref($close, 1)-1)*$volume, 5)/(Mean(Abs($close/Ref($close, 1)-1)*$volume, 5)+1e-12)",
