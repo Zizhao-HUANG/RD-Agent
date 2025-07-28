@@ -82,8 +82,8 @@ task:
             colsample_bytree: 0.8
 
             # [优化] 随着学习率降低，相应减弱正则化强度
-            lambda_l1: 1.0
-            lambda_l2: 1.0
+            lambda_l1: 20
+            lambda_l2: 50
 
             # [最佳实践] 增加早停机制，防止过拟合，节约训练时间
             early_stopping_rounds: 50 # 在验证集上连续50轮性能无提升则停止训练
