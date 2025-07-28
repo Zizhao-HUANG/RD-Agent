@@ -431,12 +431,12 @@ factor_feedback_generation:
     {
       "Observations": "/* A multi-faceted summary. Start with a high-level conclusion, then delve into specifics. Structure it like this:
       1.  **Executive Summary:** What is the main takeaway from this experiment? Did we succeed?
-      2.  **Performance Deep-Dive:** Analyze the full suite of metrics from the training log (IC, ICIR, Rank IC, returns with/without cost) against the SOTA results and the market benchmark. What are the key trade-offs observed?
-      3.  **Diagnostic Analysis:** Why did we see these results? Comment on model training (e.g., overfitting from the l2 loss curves), the stability of the alpha (ICIR), and the impact of transaction costs.
-      4.  **Strategic Implications:** What does this result mean for our overall research direction? Are we on the right track? */",
-      "Feedback for Hypothesis": "/* Directly address the initial hypothesis. Was it supported, refuted, or partially supported by the evidence from the logs? Explain concisely. */",
-      "New Hypothesis": "/* Based on your analysis, propose a single, clear, and testable hypothesis for the next research cycle. This should be a direct evolution of your findings. */",
-      "Reasoning": "/* Explain the logical link between your 'Observations' and your 'New Hypothesis'. Why do you believe this new direction is the most promising next step? */",
+      2.  **Performance Deep-Dive:** Analyze the full suite of metrics from the training log (IC, ICIR, Rank IC, returns with/without cost) against the SOTA results and the market benchmark. What are the key trade-offs observed? (Maximum 3 sentences)
+      3.  **Diagnostic Analysis:** Why did we see these results? Comment on model training (e.g., overfitting from the l2 loss curves), the stability of the alpha (ICIR), and the impact of transaction costs. (Maximum 3 sentences)
+      4.  **Strategic Implications:** What does this result mean for our overall research direction? Are we on the right track? (Maximum 3 sentences) */",
+      "Feedback for Hypothesis": "/* Directly address the initial hypothesis. Was it supported, refuted, or partially supported by the evidence from the logs? Explain concisely. (Maximum 3 sentences) */",
+      "New Hypothesis": "/* Based on your analysis, propose a single, clear, and testable hypothesis for the next research cycle. This should be a direct evolution of your findings. (Maximum 3 sentences) */",
+      "Reasoning": "/* Explain the logical link between your 'Observations' and your 'New Hypothesis'. Why do you believe this new direction is the most promising next step? (Maximum 3 sentences) */",
       "Replace Best Result": "/* A simple 'yes' or 'no', SAY NO MORE THAN yes OR no HERE. */"
     }
   user: |-
