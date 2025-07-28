@@ -30,7 +30,7 @@ from rdagent.app.utils.info import collect_info
 from rdagent.log.mle_summary import grade_summary
 
 
-def ui(port=19899, log_dir="", debug=False, data_science=False):
+def ui(port=19900, log_dir="", debug=False, data_science=False):
     """
     start web app to show the log traces.
     """
@@ -50,7 +50,7 @@ def ui(port=19899, log_dir="", debug=False, data_science=False):
         subprocess.run(cmds)
 
 
-def server_ui(port=19899):
+def server_ui(port=19900):
     """
     start web app to show the log traces in real time
     """

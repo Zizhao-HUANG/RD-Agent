@@ -1,0 +1,32 @@
+# WSL2 高性能配置 - 针对192GB RAM和24GB VRAM优化
+# 将此文件内容复制到 %USERPROFILE%\.wslconfig
+
+[wsl2]
+# 启用GPU支持
+gpuSupport=true
+
+# 内存配置 - 分配160GB给WSL2（保留32GB给Windows）
+memory=160GB
+
+# 处理器配置 - 根据您的CPU核心数调整
+processors=16
+
+# 交换配置 - 设置较大的交换空间
+swap=32GB
+
+# 本地主机转发
+localhostForwarding=true
+
+# 网络配置优化
+networkingMode=mirrored
+
+# 内存页面合并优化
+pageReporting=false
+
+# 启用嵌套虚拟化（如果需要）
+nestedVirtualization=true
+
+# 启用实验性功能
+[experimental]
+networkingMode=mirrored
+sparseVhd=true 

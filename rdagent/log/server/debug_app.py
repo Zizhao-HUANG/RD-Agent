@@ -20,7 +20,7 @@ app = Flask(__name__, static_folder=UI_SETTING.static_path)
 CORS(app)
 
 rdagent_processes = defaultdict()
-server_port = 19899
+server_port = 19900
 
 
 @app.route("/favicon.ico")
@@ -164,7 +164,7 @@ def server_static_files(fn):
     return send_from_directory(app.static_folder, fn)
 
 
-def main(port: int = 19899):
+def main(port: int = 19900):
     global server_port
     server_port = port
     app.run(debug=True, host="0.0.0.0", port=port)

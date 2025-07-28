@@ -29,7 +29,7 @@ def is_port_in_use(port):
         return s.connect_ex(("127.0.0.1", port)) == 0
 
 
-def check_and_list_free_ports(start_port=19899, max_ports=10) -> None:
+def check_and_list_free_ports(start_port=19900, max_ports=10) -> None:
     is_occupied = is_port_in_use(port=start_port)
     if is_occupied:
         free_ports = []
@@ -37,10 +37,10 @@ def check_and_list_free_ports(start_port=19899, max_ports=10) -> None:
             if not is_port_in_use(port):
                 free_ports.append(port)
         logger.warning(
-            f"Port 19899 is occupied, please replace it with an available port when running the `rdagent ui` command. Available ports: {free_ports}"
+            f"Port 19900 is occupied, please replace it with an available port when running the `rdagent ui` command. Available ports: {free_ports}"
         )
     else:
-        logger.info(f"Port 19899 is not occupied, you can run the `rdagent ui` command")
+        logger.info(f"Port 19900 is not occupied, you can run the `rdagent ui` command")
 
 
 def health_check():
