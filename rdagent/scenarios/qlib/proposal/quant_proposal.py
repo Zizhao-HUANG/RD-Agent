@@ -113,6 +113,12 @@ class QlibQuantHypothesisGen(FactorAndModelHypothesisGen):
                 - **Your Task:** Propose **1 factor**. The factor must come from a category that has not been covered yet in this phase.
                 - **Constraint:** The proposed factor must be **simple and easy to code**. We are prioritizing breadth and speed.
                 - **Reference List of Categories:** {FACTOR_CATEGORIES}
+
+                {{
+                  "action": "Specify the action (`factor` or `model`). Prioritize `hypothesis_specification`; otherwise, decide based on past results.",
+                  "hypothesis": "Propose a core, inspirational insight (the 'why', not the 'how'). Must be a single string.\\n- For `factor`: A high-level, conceptual hypothesis about market mechanics, inspired by other domains. NO specific factor details, formulas, or code.\\n- For `model`: A conceptual blueprint describing the model's name, type, and core architecture.",
+                  "reason": "Justify the hypothesis. Explain: 1. How it addresses prior findings/limitations. 2. Why this concept/analogy is chosen now. 3. What new insights are expected."
+                }}
                 """
             # Phase 2: First Optimization Pass (Rounds 15-29, 15 experiments total)
             elif num_factor_experiments < 30:
@@ -121,6 +127,12 @@ class QlibQuantHypothesisGen(FactorAndModelHypothesisGen):
                 **Goal:** Systematically optimize the 15 baseline factors created in Phase 1, one per round.
                 - **Your Task:** Review the feedback from the Phase 1 experiments. Select **1 factor** from that initial set and propose a specific optimization for it based on the results.
                 - **Constraint:** Focus on refining the original 15 ideas. Do not introduce entirely new concepts yet.
+
+                {{
+                  "action": "Specify the action (`factor` or `model`). Prioritize `hypothesis_specification`; otherwise, decide based on past results.",
+                  "hypothesis": "Propose a core, inspirational insight (the 'why', not the 'how'). Must be a single string.\\n- For `factor`: A high-level, conceptual hypothesis about market mechanics, inspired by other domains. NO specific factor details, formulas, or code.\\n- For `model`: A conceptual blueprint describing the model's name, type, and core architecture.",
+                  "reason": "Justify the hypothesis. Explain: 1. How it addresses prior findings/limitations. 2. Why this concept/analogy is chosen now. 3. What new insights are expected."
+                }}
                 """
             # Phase 3: Deep Optimization of High-Potential Factors (Rounds 30-34, 5 experiments total)
             elif num_factor_experiments < 35:
@@ -129,6 +141,12 @@ class QlibQuantHypothesisGen(FactorAndModelHypothesisGen):
                 **Goal:** Systematically enhance the most promising factors from the first two phases.
                 - **Your Task:** In each of these 5 rounds, analyze the performance of factors from Phases 1 & 2, and the ongoing optimizations within Phase 3. Select the **top 3-5 factors** that show the highest potential for alpha. Propose **advanced optimizations** for these selected factors.
                 - **Constraint:** You can **significantly increase complexity** to capture deeper, more nuanced features. Focus on quality and impact. The number of factors you optimize in each round is flexible, but aim for a focused effort on the most promising ones.
+
+                {{
+                  "action": "Specify the action (`factor` or `model`). Prioritize `hypothesis_specification`; otherwise, decide based on past results.",
+                  "hypothesis": "Propose a core, inspirational insight (the 'why', not the 'how'). Must be a single string.\\n- For `factor`: A high-level, conceptual hypothesis about market mechanics, inspired by other domains. NO specific factor details, formulas, or code.\\n- For `model`: A conceptual blueprint describing the model's name, type, and core architecture.",
+                  "reason": "Justify the hypothesis. Explain: 1. How it addresses prior findings/limitations. 2. Why this concept/analogy is chosen now. 3. What new insights are expected."
+                }}
                 """
             # Phase 4: Focused Iterative Enhancement (Rounds 35-39, 5 experiments total)
             elif num_factor_experiments < 40:
@@ -137,6 +155,12 @@ class QlibQuantHypothesisGen(FactorAndModelHypothesisGen):
                 **Goal:** Further polish the high-potential factors identified and enhanced in Phase 3.
                 - **Your Task:** Based on the comprehensive results from Phase 3, select a subset of those factors that show promise for even further improvement. Propose **3 new optimizations** for them.
                 - **Constraint:** Continue to **increase complexity if necessary**. This could involve creating more sophisticated interactions, applying non-linear transformations, or making them regime-aware.
+
+                {{
+                  "action": "Specify the action (`factor` or `model`). Prioritize `hypothesis_specification`; otherwise, decide based on past results.",
+                  "hypothesis": "Propose a core, inspirational insight (the 'why', not the 'how'). Must be a single string.\\n- For `factor`: A high-level, conceptual hypothesis about market mechanics, inspired by other domains. NO specific factor details, formulas, or code.\\n- For `model`: A conceptual blueprint describing the model's name, type, and core architecture.",
+                  "reason": "Justify the hypothesis. Explain: 1. How it addresses prior findings/limitations. 2. Why this concept/analogy is chosen now. 3. What new insights are expected."
+                }}
                 """
             # Phase 5: Unrestricted Deep Dive (Round 40 onwards)
             else:
@@ -168,6 +192,12 @@ class QlibQuantHypothesisGen(FactorAndModelHypothesisGen):
                 **Meta-Level & Structural Models:**
                 *   **Linguistics:** Is there a "grammar" to price action? Can we interpret sequences of price patterns as a language with its own syntax, predicting the next "word" or "phrase"?
                 *   **Philosophy:** What is a core, unexamined assumption we hold about markets (e.g., about efficiency, rationality, or value)? What new hypothesis emerges if we challenge it directly?
+
+                {{
+                  "action": "Specify the action (`factor` or `model`). Prioritize `hypothesis_specification`; otherwise, decide based on past results.",
+                  "hypothesis": "Propose a core, inspirational insight (the 'why', not the 'how'). Must be a single string.\\n- For `factor`: A high-level, conceptual hypothesis about market mechanics, inspired by other domains. NO specific factor details, formulas, or code.\\n- For `model`: A conceptual blueprint describing the model's name, type, and core architecture.",
+                  "reason": "Justify the hypothesis. Explain: 1. How it addresses prior findings/limitations. 2. Why this concept/analogy is chosen now. 3. What new insights are expected."
+                }}
                 """
             # ==================================================================
             # END: REVISED FACTOR RAG LOGIC
@@ -190,6 +220,12 @@ class QlibQuantHypothesisGen(FactorAndModelHypothesisGen):
                 Your primary goal is to establish a robust performance baseline by modeling fundamental time-series properties.
                 - **Strategic Direction:** Focus on architectures designed for **sequential data processing**. These models are adept at capturing local temporal dependencies (like momentum) and are essential for confirming that basic patterns can be learned before attempting more complex structures.
                 - **Goal:** Achieve a solid, difficult-to-beat baseline. Fine-tuning hyperparameters on these foundational architectures is a key strategy here.
+
+                {
+                  "action": "Specify the action (`factor` or `model`). Prioritize `hypothesis_specification`; otherwise, decide based on past results.",
+                  "hypothesis": "Propose a core, inspirational insight (the 'why', not the 'how'). Must be a single string.\\n- For `factor`: A high-level, conceptual hypothesis about market mechanics, inspired by other domains. NO specific factor details, formulas, or code.\\n- For `model`: A conceptual blueprint describing the model's name, type, and core architecture.",
+                  "reason": "Justify the hypothesis. Explain: 1. How it addresses prior findings/limitations. 2. Why this concept/analogy is chosen now. 3. What new insights are expected."
+                }
                 """
             elif num_model_experiments < 35:
                 # Phase 2: Explore more complex, long-range patterns.
@@ -198,6 +234,12 @@ class QlibQuantHypothesisGen(FactorAndModelHypothesisGen):
                 The baselines are set. Now, you must push the performance limits by exploring more powerful architectural paradigms.
                 - **Strategic Direction:** Shift focus to architectures capable of capturing **long-range and non-local dependencies**. These models can identify complex relationships across distant time steps that simpler sequential models might miss.
                 - **Goal:** Leverage our powerful hardware to explore computationally intensive but potentially more expressive architectures. The aim is to find patterns that are not obvious or sequential.
+
+                {
+                  "action": "Specify the action (`factor` or `model`). Prioritize `hypothesis_specification`; otherwise, decide based on past results.",
+                  "hypothesis": "Propose a core, inspirational insight (the 'why', not the 'how'). Must be a single string.\\n- For `factor`: A high-level, conceptual hypothesis about market mechanics, inspired by other domains. NO specific factor details, formulas, or code.\\n- For `model`: A conceptual blueprint describing the model's name, type, and core architecture.",
+                  "reason": "Justify the hypothesis. Explain: 1. How it addresses prior findings/limitations. 2. Why this concept/analogy is chosen now. 3. What new insights are expected."
+                }
                 """
             else:
                 # Phase 3: Focus on system-level improvements and novel strategies.
@@ -207,6 +249,12 @@ class QlibQuantHypothesisGen(FactorAndModelHypothesisGen):
                 - **Primary Direction: Ensembling.** Propose **meta-strategies that combine the predictions of multiple, diverse, and previously successful models**. The goal is to improve robustness, reduce prediction variance, and create a more stable system, which is often more valuable than a marginal gain in a single metric.
                 - **Secondary Direction: Hybrid Architectures.** Explore models that creatively **fuse different concepts**, such as combining the feature extraction power of tabular models with the dynamic awareness of time-series models.
                 - **Research Frontier: Relational Modeling.** As a high-risk option, consider a paradigm shift towards models that can learn from **inter-asset relationships** (e.g., how stocks influence each other), moving beyond single-asset prediction.
+
+                {
+                  "action": "Specify the action (`factor` or `model`). Prioritize `hypothesis_specification`; otherwise, decide based on past results.",
+                  "hypothesis": "Propose a core, inspirational insight (the 'why', not the 'how'). Must be a single string.\\n- For `factor`: A high-level, conceptual hypothesis about market mechanics, inspired by other domains. NO specific factor details, formulas, or code.\\n- For `model`: A conceptual blueprint describing the model's name, type, and core architecture.",
+                  "reason": "Justify the hypothesis. Explain: 1. How it addresses prior findings/limitations. 2. Why this concept/analogy is chosen now. 3. What new insights are expected."
+                }
                 """
             # ==================================================================
             # END: REVISED MODEL RAG LOGIC

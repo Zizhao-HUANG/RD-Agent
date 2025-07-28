@@ -263,14 +263,20 @@ factor_experiment_output_format: |-
   **CRUCIAL RULE: You MUST generate exactly one (1) factor.**
   The output must be a single, valid JSON object containing only one top-level key, which is the factor's unique name.
 
+  **IMPORTANT FOR FORMULA (Latex/Math):**
+  - All backslashes in the "formulation" string MUST be double-escaped, i.e., write `\\` instead of `\` (for example: `\\frac{\\$close}{Ref(\\$close, 20)}`).
+  - DO NOT use single backslash (`\`) anywhere in the JSON. Single backslashes will cause invalid JSON parse errors.
+  - If you use variables like `$close`, you MUST write them as `\\$close` in the JSON.
+
   **GOOD EXAMPLE (Correct Format):**
   {
     "<YourFactorName>": {
       "description": "[FactorType] A clear description of the factor's logic and intuition.",
-      "formulation": "<Latex_Formula_For_The_Factor>",
+      "formulation": "StdDev(\\frac{\\$close}{Ref(\\$close, 1)} - 1, 20)",  // All backslashes are double-escaped
       "variables": {
-        "<variable_or_function_1>": "Description of the first variable or function.",
-        "<variable_or_function_2>": "Description of the second variable or function."
+        "\\$close": "The daily closing price of the security.",
+        "StdDev(series, n)": "A function that calculates the rolling standard deviation of a data series over the past 'n' periods.",
+        "Ref(series, n)": "A function that returns the value of a data series 'n' periods ago."
       }
     }
   }
@@ -280,6 +286,8 @@ factor_experiment_output_format: |-
     "<FactorName_A>": { ... },
     "<FactorName_B>": { ... }
   }
+  // Or any JSON with a single backslash in the string, for example:
+  "formulation": "StdDev(\frac{$close}{Ref($close, 1)} - 1, 20)" // BAD! DO NOT USE single backslash
 
 model_experiment_output_format: |-
   You must design **exactly one model** to test the hypothesis.
