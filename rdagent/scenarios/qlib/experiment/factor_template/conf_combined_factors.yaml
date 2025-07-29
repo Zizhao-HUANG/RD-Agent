@@ -72,7 +72,7 @@ task:
             max_depth: 8
             num_leaves: 255               # 与深度匹配 (2^8-1)
             min_data_in_leaf: 120          # 抑制过拟合
-            subsample: 0.7                # 行采样 (bagging_fraction)
+            subsample: 0.8                # 行采样 (bagging_fraction)
             bagging_freq: 5
             colsample_bytree: 0.8         # 列采样 (feature_fraction)
             lambda_l1: 0.2
