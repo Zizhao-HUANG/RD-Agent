@@ -213,7 +213,7 @@ class QlibQuantHypothesisGen(FactorAndModelHypothesisGen):
             # Count the number of previous model experiments to guide the phased strategy
             num_model_experiments = sum(1 for exp, _ in trace.hist if exp.hypothesis.action == "model")
 
-            if num_model_experiments < 7:
+            if num_model_experiments < 15:
                 # Phase 1: Focus on foundational time-series properties.
                 qaunt_rag = """
                 **Phase 1: Foundational Modeling.**
@@ -227,7 +227,7 @@ class QlibQuantHypothesisGen(FactorAndModelHypothesisGen):
                   "reason": "Justify the hypothesis. Explain: 1. How it addresses prior findings/limitations. 2. Why this concept/analogy is chosen now. 3. What new insights are expected."
                 }
                 """
-            elif num_model_experiments < 12:
+            elif num_model_experiments < 30:
                 # Phase 2: Explore more complex, long-range patterns.
                 qaunt_rag = """
                 **Phase 2: Advanced Pattern Recognition.**
