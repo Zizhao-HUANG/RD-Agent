@@ -558,6 +558,10 @@ action_gen:
     {
       "action": "model"
     }
+    Example:
+    {
+      "action": "factor"
+    }
   user: |-
     **Analyze the following experimental history to determine the next action.**
 
