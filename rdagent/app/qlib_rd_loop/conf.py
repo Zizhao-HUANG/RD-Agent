@@ -110,7 +110,7 @@ class QuantBasePropSetting(BasePropSetting):
     evolving_n: int = 10
     """Number of evolutions"""
 
-    action_selection: str = "bandit"
+    action_selection: str = "llm"
     """Action selection strategy: 'bandit' for bandit-based selection, 'llm' for LLM-based selection, 'random' for random selection"""
 
 
