@@ -378,9 +378,9 @@ model_experiment_output_format: |-
         },
         "training_hyperparameters": {
             "n_epochs": 100,
-            "lr": "1e-4",
-            "early_stop": 10,
-            "batch_size": 1024,
+            "lr": "1e-5",
+            "early_stop": 10, # set to 10 to save time
+            "batch_size": 2048,
             "weight_decay": "1e-4",
             "precision": "mixed_float16",
             "loss_fn": "e.g., 'MSELoss'. The loss function to use.",
@@ -496,12 +496,11 @@ model_feedback_generation:
     # Part 3: Mandatory Output Format
     You MUST provide your analysis in the following strict JSON format. Do not add any text outside the JSON structure.
     {
-      "observations": "Synthesize your findings from the training log and performance metrics. Start with training dynamics (e.g., 'Model showed signs of overfitting after epoch 14, achieving a best validation loss of 0.9934.'). Then, summarize the performance trade-offs (e.g., 'While IC improved by 0.01, the annualized return decreased by 3% and max drawdown worsened by 5%.'). Be concise and data-focused (max 3 sentences).",
-      "hypothesis_evaluation": "Explicitly state whether the results support or refute the hypothesis, citing the most relevant metrics as evidence. (max 2 sentences).",
-      "new_hypothesis": "Propose a specific, revised or entirely new hypothesis. The suggestion should be concrete enough to be implemented. Examples: 'Increase the dropout rate in all TemporalBlocks to 0.5 to mitigate overfitting.' or 'Decrease the learning rate to 1e-05 to achieve more stable convergence and potentially a better minimum.'",
-      "reasoning": "Explain the logic for your `new_hypothesis`, directly linking it to your `observations`. Example: 'The early onset of overfitting at epoch 14 suggests the model's capacity is too high for the given feature set; therefore, stronger regularization via increased dropout is the logical next step.' (max 2 sentences).",
-      "decision_to_update_sota": <true or false>,
-      "justification_for_decision": "Provide a clear, risk-aware reason for your decision. Example: 'False. The marginal improvement in IC does not justify the significantly worse max drawdown, leading to a poorer risk-adjusted return profile.' or 'True. The 10% increase in annualized return, with only a minor 2% increase in max drawdown, represents a superior strategy.'"
+      "Observations": "Synthesize your findings from the training log and performance metrics. Start with training dynamics (e.g., 'Model showed signs of overfitting after epoch 14, achieving a best validation loss of 0.9934.'). Then, summarize the performance trade-offs (e.g., 'While IC improved by 0.01, the annualized return decreased by 3% and max drawdown worsened by 5%.'). Be concise and data-focused (max 3 sentences).",
+      "Feedback for Hypothesis": "Explicitly state whether the results support or refute the hypothesis, citing the most relevant metrics as evidence. (max 2 sentences).",
+      "New Hypothesis": "Propose a specific, revised or entirely new hypothesis. The suggestion should be concrete enough to be implemented. Examples: 'Increase the dropout rate in all TemporalBlocks to 0.5 to mitigate overfitting.' or 'Decrease the learning rate to 1e-05 to achieve more stable convergence and potentially a better minimum.'",
+      "Reasoning": "Explain the logic for your `New Hypothesis`, directly linking it to your `Observations`. Example: 'The early onset of overfitting at epoch 14 suggests the model's capacity is too high for the given feature set; therefore, stronger regularization via increased dropout is the logical next step.' (max 2 sentences).",
+      "Decision": <true or false>,
     }
   user: |-
     {% if sota_hypothesis %} 
