@@ -25,8 +25,14 @@ qlib_factor_interface: |-
 
   # --- HARD RULES ---
   # Adherence to these rules is mandatory. Violation will result in failure.
-  # 1. NO MASKING NUMERICAL ISSUES: It is strictly forbidden to use `.fillna()`, `.replace()`, or any other method to fill/replace `NaN` or `inf` values *after* a calculation. All numerical issues must be addressed at the source of the calculation (e.g., using `np.divide` for safe division, or adding a small epsilon to a denominator).
-  # 2. AVOID SLOW OPERATIONS: The use of `.apply()` is strongly discouraged due to poor performance. It is only permissible if a vectorized alternative is impossible or demonstrably slower. If used, a comment `# PERF_REASON: ...` explaining the justification is mandatory.
+  # 1. MISSING VALUE HANDLING: Handle all missing values using contextually appropriate methods. For financial data with ~5.78% missing values:
+  #    - Price data: Use smooth interpolation or trend-preserving methods
+  #    - Volume data: Use adaptive smoothing or distribution-based imputation  
+  #    - Factor data: Use robust cross-sectional or temporal filling methods
+  #    - Calculations: Use safe numerical operations to prevent NaN/inf
+  #    - AVOID simple zero or mean filling without financial context
+  # 2. PERFORMANCE: Use vectorized operations. Avoid slow methods like .apply() unless absolutely necessary.
+  # 3. VALUE CLIPPING: Implement clipping to limit extreme values and reduce outlier impact.
 
   # --- I/O SPECIFICATION ---
   - **Input**: Load data from `daily_pv.h5` using `pd.read_hdf("daily_pv.h5", key="data")`.
@@ -40,14 +46,19 @@ qlib_factor_interface: |-
   # --- CORE LOGIC: The "Reset-Group-Set" Pattern ---
   # This pattern is MANDATORY for any grouped operations (time-series or cross-sectional).
 
-  # 1. RESET: Flatten the MultiIndex.
+  # 1. RESET: Flatten the MultiIndex and handle missing values.
   df_reset = df.reset_index()
-  df_reset.sort_values(["instrument", "datetime"], inplace=True) # Default sort for time-series
+  df_reset.sort_values(["instrument", "datetime"], inplace=True)
+  
+  # Handle missing values using appropriate methods for each data type
+  # Price data: smooth interpolation
+  # Volume data: adaptive smoothing  
+  # Factor data: robust cross-sectional filling
 
-  # 2. GROUP & CALCULATE: Perform calculations on the flattened DataFrame.
+  # 2. GROUP & CALCULATE: Perform calculations on cleaned data.
   #    ... your calculation logic here ...
 
-  # 3. SET: Restore the MultiIndex for the final output.
+  # 3. SET: Restore the MultiIndex for final output.
   out = (
       df_reset[["datetime", "instrument", "factor_value"]]
       .set_index(["datetime", "instrument"])
@@ -63,16 +74,16 @@ qlib_factor_interface: |-
               .transform(lambda s: s.rolling(20, min_periods=20).sum())
   )
 
-  # EXAMPLE 2: Vectorized Rolling Weighted Average (Time-Series)
-  grouped_s = df_reset.groupby("instrument")["$close"]
-  s_t0 = grouped_s.transform(lambda s: s)
-  s_t1 = grouped_s.transform(lambda s: s.shift(1))
-  df_reset["weighted_avg"] = 0.5 * s_t0 + 0.5 * s_t1
+  # EXAMPLE 2: Safe Division Operations
+  # Use safe numerical operations to prevent NaN/inf values
 
-  # EXAMPLE 3: Cross-Sectional Operation (Group by datetime)
-  # For factors comparing stocks at the same time (e.g., ranking), group by `datetime`.
-  df_reset["rank_pct"] = df_reset.groupby("datetime")["$close"].rank(pct=True)
+  # EXAMPLE 3: Cross-Sectional Operations (Group by datetime)
+  # For factors comparing stocks at the same time
 
+  # EXAMPLE 4: Value Clipping
+  # Implement clipping to limit extreme values and reduce outlier impact
+  # Example: clipping return values to [-0.2, 0.2] range
+  
   # --- FINAL SCRIPT STRUCTURE ---
   import pandas as pd
   import numpy as np
@@ -91,11 +102,11 @@ qlib_factor_interface: |-
       assert out.columns.tolist() == ["<FactorName>"], "Output column name is incorrect."
       
       # Numerical robustness checks
-      assert np.isfinite(out.values).all(), "Output contains NaN or Inf values. This must be fixed in the calculation logic, not by using .fillna()/.replace()."
+      assert np.isfinite(out.values).all(), "Output contains NaN or Inf values. Handle all missing values appropriately."
       
       # Distributional Analysis & Non-Fatal Warnings
       factor_series = out.iloc[:, 0]
-      assert factor_series.isnull().sum() == 0, "Output contains NaN values, which is prohibited."
+      assert factor_series.isnull().sum() == 0, "Output contains NaN values. Handle all missing values before final output."
       assert factor_series.std() > 1e-6, f"Factor has near-zero variance ({factor_series.std():.2e}), suggesting it might be a constant or flawed."
       
       # The following is a non-fatal check. It prints a warning but WILL NOT cause an error.
@@ -119,7 +130,13 @@ qlib_factor_output_format: |-
   - **Dtype**: `float64` or `float32`.
 
   **MANDATORY: The final DataFrame must NOT contain any `NaN` or `inf` values.**
-  Any `NaN` values generated during intermediate calculations (e.g., at the beginning of a rolling window) **must be handled** before saving. A common strategy is to fill them with `0` or another sensible default. This is enforced by an assertion in the execution environment.
+  Any `NaN` values generated during intermediate calculations **must be handled contextually** before saving:
+  - Use appropriate smoothing or interpolation methods for price data
+  - Use adaptive smoothing or distribution-based methods for volume data
+  - Use robust cross-sectional or temporal methods for factor data
+  - Use safe numerical operations to prevent NaN/inf
+  - Avoid simple zero or mean filling without financial context
+  This is enforced by an assertion in the execution environment.
 
   **Example of a valid `result.h5` structure:**
   ```
