@@ -187,9 +187,8 @@ class QlibModelRunner(CachedRunner[QlibModelExperiment]):
                     template_context["num_timesteps"] = 90
             else:  # Tabular
                 template_context["dataset_cls"] = "DatasetH"
-                # For tabular models, remove step_len as it's not needed
-                if "step_len" in template_context:
-                    del template_context["step_len"]
+                # For tabular models, set step_len to None so Jinja2 condition works properly
+                template_context["step_len"] = None
             
             logger.info(f"Final template context for rendering: {template_context}")
             
