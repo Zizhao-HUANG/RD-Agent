@@ -83,7 +83,7 @@ qlib_factor_interface: |-
   # EXAMPLE 4: Value Clipping
   # Implement clipping to limit extreme values and reduce outlier impact
   # Example: clipping return values to [-0.2, 0.2] range
-  
+
   # --- FINAL SCRIPT STRUCTURE ---
   import pandas as pd
   import numpy as np
@@ -219,7 +219,7 @@ qlib_factor_from_report_rich_style_description : |-
 qlib_factor_experiment_setting: |-
   | Dataset 📊 | Model 🤖    | Factors 🌟       | Data Split  🧮                                   |
   |---------|----------|---------------|-------------------------------------------------|
-  | CSI300  | LGBModel | Alpha158 Plus | Train: 2008-01-01 to 2014-12-31 <br> Valid: 2015-01-01 to 2016-12-31 <br> Test  : 2017-01-01 to 2020-08-01 |
+  | CSI300  | LGBModel | Alpha158 Plus | Train: 2008-01-01 to 2014-12-31 <br> Valid: 2015-01-01 to 2018-12-31 <br> Test  : 2019-01-01 to 2020-08-01 |
 
 qlib_model_background: |-
   A **model** in our context is a machine learning structure (e.g., a neural network) that learns patterns from input factors to predict asset returns.

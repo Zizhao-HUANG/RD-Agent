@@ -93,7 +93,7 @@ model_hypothesis_specification: |-
   * `last_hypothesis_and_feedback`: The architecture and performance report of the most recent experiment. This tells you what was just tried.
   * `historical_archive`: The complete log of all past hypotheses and their outcomes (successes and failures). This is your long-term memory.
 
-  **Hardware Context & Ambition Mandate:** Your operating environment is equipped with an **NVIDIA H100 (80 GB HBM3 VRAM)** and **384 GB system RAM**. This powerful hardware is not a constraint but an asset to be fully exploited. Therefore, when proposing hypotheses for advanced models, you are encouraged to be ambitious with parameters such as `d_model`, `num_layers`, and `num_timesteps`. Configurations that utilize a significant portion of the 80GB VRAM are not only feasible but highly encouraged for exploring the upper limits of model performance. Do not shy away from proposing large-scale models that would be intractable on lesser hardware.
+  **Hardware Context & Ambition Mandate:** Your operating environment is equipped with an **NVIDIA RTX 4090 (24 GB VRAM)** and **192 GB system RAM**. This powerful hardware is not a constraint but an asset to be fully exploited. Therefore, when proposing hypotheses for advanced models, you are encouraged to be ambitious with parameters such as `d_model`, `num_layers`, and `num_timesteps`. Configurations that utilize a significant portion of the 24GB VRAM are not only feasible but highly encouraged for exploring the upper limits of model performance. Do not shy away from proposing large-scale models that would be intractable on lesser hardware.
   
   **Justification Requirement:** For each proposed model, provide the following.
 
@@ -320,7 +320,7 @@ model_experiment_output_format: |-
       *   **Sparsity:** `lambda_sparse` is a key regularization hyperparameter that encourages sparse feature selection at each step.
 
   **C. CRITICAL INSTRUCTIONS FOR VRAM-AWARE TUNING (The "How Much"):**
-  1.  **Context Reminder:** The target hardware is an **NVIDIA H100 with 80 GB of VRAM**. Your `batch_size` and model complexity are ultimately constrained by this.
+  1.  **Context Reminder:** The target hardware is an **NVIDIA RTX 4090 with 24 GB of VRAM**. Your `batch_size` and model complexity are ultimately constrained by this.
   2.  **VRAM Estimation First:** After deciding on the model's architectural scale (based on Sections A & B), you **MUST** perform a VRAM estimation. This validates the feasibility of your chosen scale.
   3.  **Document Your Reasoning:** The `design_rationale_and_hyperparameter_justification` field is where you document your entire thought process, from strategic choices to feasibility analysis.
   4.  **Set Batch Size:** Use the result of your estimation to set a reasonable `batch_size`. If your model is large (e.g., a large Transformer), start conservatively and justify it. Remember the interplay: `batch_size` affects both VRAM and optimization dynamics.
@@ -346,7 +346,7 @@ model_experiment_output_format: |-
             "dropout": "e.g., 0.1. Rate for dropout layers.",
             "activation": "e.g., 'ReLU'. Activation function for MLP layers.",
             "normalization": "e.g., 'BatchNorm'. Type of normalization layer ('BatchNorm', 'LayerNorm', or null).",
-            "precision": "mixed_float16", mixed_float16 is VERY IMPORTANT for faster training
+            "precision": "fp32", fp32 is MANDATORY for numerical stability
 
 
 
@@ -382,7 +382,7 @@ model_experiment_output_format: |-
             "early_stop": 10, # set to 10 to save time
             "batch_size": 2048,
             "weight_decay": "1e-4",
-            "precision": "mixed_float16",
+            "precision": "fp32",
             "loss_fn": "e.g., 'MSELoss'. The loss function to use.",
             "optimizer": "e.g., 'AdamW'. The optimization algorithm.",
             "optimizer_kwargs": {
