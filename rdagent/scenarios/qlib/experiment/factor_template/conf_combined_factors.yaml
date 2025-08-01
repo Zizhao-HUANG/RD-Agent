@@ -6,7 +6,7 @@ market: &market csi300
 benchmark: &benchmark SH000300
 
 data_handler_config: &data_handler_config
-    start_time: 2008-01-01
+    start_time: 2005-01-04
     end_time: 2025-07-30
     instruments: *market
     data_loader:
@@ -50,7 +50,7 @@ port_analysis_config: &port_analysis_config
             topk: 50
             n_drop: 5
     backtest:
-        start_time: 2023-01-03
+        start_time: 2024-01-02
         end_time: 2025-07-30
         account: 100000000
         benchmark: *benchmark
@@ -66,15 +66,23 @@ task:
         class: LGBModel
         module_path: qlib.contrib.model.gbdt
         kwargs:
-            loss: mse
-            colsample_bytree: 0.8879
-            learning_rate: 0.2
-            subsample: 0.8789
-            lambda_l1: 205.6999
-            lambda_l2: 580.9768
+            learning_rate: 0.06
+            n_estimators: 4000
+            boosting_type: goss
+            top_rate: 0.2
+            other_rate: 0.1
             max_depth: 8
-            num_leaves: 210
-            num_threads: 20
+            num_leaves: 255
+            min_data_in_leaf: 180
+            min_gain_to_split: 0.02
+            subsample: 1.0
+            colsample_bytree: 0.8
+            lambda_l1: 15
+            lambda_l2: 60
+            num_threads: -1
+            loss: mse
+            seed: 42
+            early_stopping_rounds: 600
     dataset:
         class: DatasetH
         module_path: qlib.data.dataset
@@ -84,9 +92,9 @@ task:
                 module_path: qlib.contrib.data.handler
                 kwargs: *data_handler_config
             segments:
-                train: [2008-01-01, 2019-12-31]
-                valid: [2020-01-02, 2022-12-30]
-                test: [2023-01-03, 2025-07-30]
+                train: [2005-01-04, 2021-12-31]
+                valid: [2022-01-04, 2023-12-29]
+                test: [2024-01-02, 2025-07-30]
     record: 
         - class: SignalRecord
           module_path: qlib.workflow.record_temp
