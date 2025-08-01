@@ -330,6 +330,7 @@ model_experiment_output_format: |-
       *   **For Other Architectures:** If a precise calculation is not feasible, provide a qualitative assessment and justify a "profiling run" with a minimal `batch_size`.
 
   **JSON OUTPUT SCHEMA:**
+  # This section is just a reference, you can add as much hyperparameters as you want, but follow the schema below.
   {
     "model_name (The name of the model)": {
         "design_rationale_and_hyperparameter_justification": "YOUR COMPREHENSIVE RATIONALE GOES HERE. This must cover: 1. How the model design tests the hypothesis. 2. Justification for key architectural hyperparameters (covering model-family specifics from Guidance B). 3. Justification for key training hyperparameters (optimizer, lr, scheduler). 4. The detailed VRAM estimation that validates your choices and determines the batch_size.",
@@ -379,8 +380,8 @@ model_experiment_output_format: |-
         "training_hyperparameters": {
             "n_epochs": 100,
             "lr": "1e-5",
-            "early_stop": 10, # set to 10 to save time
-            "batch_size": 2048,
+            "early_stop": 10, # set to 5-10 to save time
+            "batch_size": 8, # set to a small value to get a better generalization
             "weight_decay": "1e-4",
             "precision": "fp32",
             "loss_fn": "e.g., 'MSELoss'. The loss function to use.",
