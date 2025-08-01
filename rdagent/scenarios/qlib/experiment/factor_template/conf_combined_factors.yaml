@@ -66,23 +66,27 @@ task:
         class: LGBModel
         module_path: qlib.contrib.model.gbdt
         kwargs:
-            learning_rate: 0.06
-            n_estimators: 4000
-            boosting_type: goss
-            top_rate: 0.2
-            other_rate: 0.1
-            max_depth: 8
-            num_leaves: 255
-            min_data_in_leaf: 180
-            min_gain_to_split: 0.02
-            subsample: 1.0
+            boosting_type: dart
+            learning_rate: 0.013
+            n_estimators: 1400
+            num_leaves: 767
+            max_depth: -1
+            min_data_in_leaf: 200
+            min_gain_to_split: 0
+            drop_rate: 0.11
+            skip_drop: 0.35
+            subsample: 0.8
+            bagging_freq: 1
             colsample_bytree: 0.8
-            lambda_l1: 15
-            lambda_l2: 60
-            num_threads: -1
+            feature_fraction_bynode: 0.65
+            extra_trees: true
+            lambda_l1: 0
+            lambda_l2: 32
+            max_bin: 511
             loss: mse
             seed: 42
-            early_stopping_rounds: 600
+            early_stopping_rounds: 200
+
     dataset:
         class: DatasetH
         module_path: qlib.data.dataset
