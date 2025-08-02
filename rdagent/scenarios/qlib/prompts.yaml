@@ -347,6 +347,25 @@ model_experiment_output_format: |-
       *   **Small Stride Justification:** If you choose `window_stride < 0.5 * window_length`, you MUST explain why the increased sample overlap is necessary and how you will prevent overfitting.
       *   **Sample Correlation Warning:** Excessive overlap between training samples leads to inflated performance metrics and poor generalization.
 
+  **E. DYNAMIC PRECISION STRATEGY SELECTION (The "How Precise"):**
+  The target GPU (NVIDIA RTX 4090) supports FP32, TF32, BF16, and FP16 precision modes. You MUST explicitly decide which precision to use, and justify this based on model family, training stage, and expected numerical sensitivity.
+
+  1.  **General Guidelines:**
+      *   Use `fp32` during early training (first few epochs) or for highly sensitive models (e.g., LSTMs or tasks with extreme values).
+      *   Use `fp16` or `bf16` after warmup if model is stable, especially for Transformers or TCNs.
+      *   Use `tf32` as a fallback between `fp32` and `fp16`, especially if AMP instabilities occur.
+
+  2.  **Mandatory Precision Field:** You MUST include a `precision` field in both `hyperparameters` and `training_hyperparameters`. This can take values:
+      *   `"fp32"`  safest, most stable, slower
+      *   `"fp16"`  fastest, risk of underflow, requires AMP + GradScaler
+      *   `"bf16"`  stable and fast, only if GPU supports it
+      *   `"tf32"`  good default for medium-sized models on Ampere cards
+
+  3.  **Justification Required:** In the `design_rationale_and_hyperparameter_justification`, you MUST mention:
+      *   Why the selected precision is safe for your model family
+      *   How it balances numerical accuracy and training speed
+      *   How it fits in the available VRAM budget
+
   **JSON OUTPUT SCHEMA:**
   # This section is just a reference, you can add as much hyperparameters as you want, but follow the schema below.
   {
@@ -365,7 +384,7 @@ model_experiment_output_format: |-
             "dropout": "e.g., 0.1. Rate for dropout layers.",
             "activation": "e.g., 'ReLU'. Activation function for MLP layers.",
             "normalization": "e.g., 'BatchNorm'. Type of normalization layer ('BatchNorm', 'LayerNorm', or null).",
-            "precision": "fp32", fp32 is MANDATORY for numerical stability
+            "precision": "e.g., 'fp32'. Choose from: 'fp32', 'fp16', 'bf16', 'tf32'. fp32 is recommended for stability. Lower precision (fp16/bf16) is allowed if justified in design_rationale_and_hyperparameter_justification."
 
 
 
@@ -398,10 +417,10 @@ model_experiment_output_format: |-
         "training_hyperparameters": {
             "n_epochs": 100,
             "lr": "1e-5",
-            "early_stop": 10, # set to 5-10 to save time
+            "early_stop": 5, # set to 5-10 to save time
             "batch_size": 8, # set to a small value to get a better generalization
             "weight_decay": "1e-4",
-            "precision": "fp32",
+            "precision": "e.g., 'fp32'. Choose from: 'fp32', 'fp16', 'bf16', 'tf32'. If using fp16/bf16, ensure AMP is enabled and GradScaler is used.",
             "loss_fn": "e.g., 'MSELoss'. The loss function to use.",
             "optimizer": "e.g., 'AdamW'. The optimization algorithm.",
             "optimizer_kwargs": {
