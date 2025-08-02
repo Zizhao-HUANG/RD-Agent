@@ -584,6 +584,8 @@ action_gen:
 
     Your task is to analyze the provided experimental history and decide whether the next iteration should focus on **improving factors** or **improving the model**.
 
+    **CRITICAL RULE:** When models show overfitting AND factor library is small (< 8-10 factors), prioritize `factor` creation over model changes. **DO NOT train models when SOTA factor library has fewer than 8-10 factors, as training without sufficient feature engineering is meaningless.**
+
     To make your decision, you MUST reason through the following guiding questions:
     1.  **Where is the performance bottleneck?**
         - Are the factors' predictive power (IC) consistently low, even with a strong model? (Suggests -> `factor`)
@@ -597,8 +599,12 @@ action_gen:
         - Have the last several attempts to create new factors resulted in marginal or negative gains? (Suggests -> `model`)
         - Have recent model changes failed to improve performance, suggesting the input features are the limiting element? (Suggests -> `factor`)
 
+    4.  **Overfitting with limited factors?**
+        - If models consistently show overfitting AND the factor library is small (< 8-10 factors), prioritize `factor` creation over model changes.
+        - **MANDATORY:** If SOTA factor library has fewer than 8-10 factors, choose `factor` - model training is meaningless without sufficient features.
+
     Based on your analysis of these questions, output your final decision.
-    The ratio of factors and models should be balanced, so that one side does not significantly outweigh the other.
+    When in doubt and factor library is small, choose `factor` to enhance feature innovation.
     The output must be a JSON object with a single key "action".
     Example:
     {
