@@ -253,7 +253,7 @@ factor_hypothesis_specification: |-
   *   **Implementation Feasibility:** While you focus on the concept, it must be grounded in what is possible. All proposed factor concepts MUST be translatable into `qlib`'s operator language using the available data: `$open`, `$high`, `$low`, `$close`, `$volume`, and `$factor`.
   *   **SOTA Awareness:** The SOTA (State-of-the-Art) factor library is automatically updated with successful factors from previous trials. **Do not re-propose factors that have already succeeded.** Your goal is to find *new* sources of alpha that can improve upon the current SOTA.
   *   **Iterative Strategy:** Analyze the feedback from previous trials. If a conceptual direction (e.g., Volatility) is showing promise, propose refinements or variations. If a direction is consistently failing, pivot to a different, unexplored category from your toolkit or invent a new one.
-  *   **Generation Quota:** Propose 1-3 distinct, well-reasoned factor hypotheses in each response. Focus on quality and novelty over quantity.
+  *   **Generation Quota:** Propose 1 distinct, well-reasoned factor hypothesis in each response. Focus on quality and novelty over quantity.
 
   Now, based on the provided history and feedback, generate your next set of hypotheses.
 
@@ -288,6 +288,9 @@ factor_experiment_output_format: |-
   "formulation": "StdDev(\frac{$close}{Ref($close, 1)} - 1, 20)" // BAD! DO NOT USE single backslash
 
 model_experiment_output_format: |-
+  **CRITICAL WINDOW LENGTH CONSTRAINT:**
+  Note: For time series tasks, input window length (num_timesteps) is a core hyperparameter that should be explicitly justified and, unless strong reason is found, should not exceed the typical effective memory of the target label.
+
   You must design **exactly one model** to test the hypothesis.
   Your response must be a single, valid JSON object and nothing else.
 
@@ -300,6 +303,11 @@ model_experiment_output_format: |-
               *   **Model Capacity vs. Regularization:** Justify how your choices for model size (e.g., `hidden_size`, `num_layers`, `d_model`) are balanced by regularization techniques (e.g., `dropout`, `weight_decay`) to prevent overfitting. A more complex model requires stronger regularization.
       *   **Learning Dynamics:** Justify your choice of `optimizer` and `lr`. AdamW is a strong default for deep learning models. The learning rate is critical; a common starting range is `1e-5` to `1e-3`. For Transformers, a learning rate scheduler with warmup is almost mandatory.
       *   **Training Duration & Stability:** Justify `n_epochs` based on expected convergence speed. `early_stop` is a crucial safeguard. `batch_size` affects both VRAM usage and gradient stability.
+      *   **Time Series Configuration:** **CRITICAL:** You MUST explicitly set `step_len`, `num_timesteps`, `window_length`, and `window_stride` in `training_hyperparameters`. These parameters are MANDATORY and control the temporal window size for your model. 
+          - **Window Length Constraint:** `num_timesteps` should typically be 10-30 for 1-5 day prediction tasks. Larger values are acceptable but require justification.
+          - **Stride Constraint:** `window_stride` should be >= 0.5 * `window_length` to avoid excessive sample overlap.
+          - **Justification Required:** You MUST explain why you chose these specific values and how they relate to the target prediction horizon.
+          - For TimeSeries models, `step_len` and `num_timesteps` should be equal. For Tabular models, these should be null or omitted.
   3.  **Learn from the Past:** Before finalizing your parameters, mentally consult the `historical_archive`. If a similar architecture has been tested, use its results as a baseline. In your justification, mention if you are building on a past success or correcting a past failure.
 
   **B. MODEL-FAMILY SPECIFIC GUIDANCE (The "Which"):**
@@ -328,6 +336,16 @@ model_experiment_output_format: |-
       *   **Example 1: Benchmark-based Scaling (Good for Transformers):** Use a similar completed experiment from `historical_archive` as a reference. Scale its dynamic VRAM based on the workload ratio `(B * L * D * layers)`.
       *   **Example 2: Peak-Tensor Analysis (Good for TCNs):** Calculate the VRAM for the largest padded intermediate tensor: `V_peak = (B * C * (L + padding) * 2) / 1024^3`. The total VRAM is a multiple of this (e.g., `V_peak * 9`).
       *   **For Other Architectures:** If a precise calculation is not feasible, provide a qualitative assessment and justify a "profiling run" with a minimal `batch_size`.
+
+  **D. CRITICAL INSTRUCTIONS FOR WINDOW LENGTH & STRIDE TUNING (Anti-Overfitting):**
+  1.  **Window Length Constraint:** `num_timesteps` should typically be 10-30 for 1-5 day prediction tasks. Larger values require strong justification and risk overfitting.
+  2.  **Stride Constraint:** `window_stride` should be >= 0.5 * `window_length` to avoid excessive sample overlap.
+  3.  **Justification Required:** You MUST explain why you chose these specific values and how they relate to the target prediction horizon.
+  4.  **Anti-Overfitting Rules:**
+      *   **Default Recommendation:** Start with `window_length=20` and `window_stride=10` for 1-5 day prediction tasks.
+      *   **Large Window Justification:** If you choose `window_length > 30`, you MUST provide strong justification for why longer historical context is necessary for the specific prediction task.
+      *   **Small Stride Justification:** If you choose `window_stride < 0.5 * window_length`, you MUST explain why the increased sample overlap is necessary and how you will prevent overfitting.
+      *   **Sample Correlation Warning:** Excessive overlap between training samples leads to inflated performance metrics and poor generalization.
 
   **JSON OUTPUT SCHEMA:**
   # This section is just a reference, you can add as much hyperparameters as you want, but follow the schema below.
@@ -396,7 +414,11 @@ model_experiment_output_format: |-
                 "eta_min": "1e-6",
                 "warmup_steps": "e.g., 1000"
             },
-            "seed": 42
+            "seed": 42,
+            "step_len": "MANDATORY: The length of the time series window for data preprocessing. This determines how many historical time steps are used as input features. For TimeSeries models, this should be a positive integer (e.g., 20, 60, 120). For Tabular models, this should be null or omitted.",
+            "num_timesteps": "MANDATORY: The number of time steps in the input sequence for the model. This should match the step_len value for TimeSeries models. For Tabular models, this should be null or omitted. RECOMMENDED RANGE: 10-30 for 1-5 day prediction tasks.",
+            "window_length": "MANDATORY: Sliding input sequence length. Should reflect the true dependency range of the label. Overly large values inflate sample correlation and risk immediate overfitting. RECOMMENDED RANGE: 10-30 for 1-5 day prediction tasks.",
+            "window_stride": "MANDATORY: Sliding window stride. Controls overlap and effective sample size. Should be set >= 0.5 * window_length unless justified. Prevents excessive sample correlation and overfitting. RECOMMENDED: window_stride >= 0.5 * window_length."
         },
         "model_type": "Tabular or TimeSeries"
     }
@@ -530,7 +552,7 @@ model_feedback_generation:
 
     2.  **When to Change Research Direction:**
         - If the new results are **substantially worse** than SOTA (e.g., ICIR turns negative, Annualized Return drops by more than half), or if several consecutive minor tweaks to a hypothesis fail to yield improvement.
-        - A "new direction" means proposing a more fundamental change, such as a different model architecture (e.g., "The TCN architecture seems to be struggling; let's try an LSTM-based model to better capture sequential dependencies.") or a significant change in hyperparameters (e.g., "The model is consistently overfitting; let's try a much smaller network.").
+        - A "new direction" means proposing a more fundamental change, such as a different model architecture (e.g., "The TCN architecture seems to be struggling; let's try an LSTM-based model to better capture sequential dependencies.") or a significant change in hyperparameters (e.g., "The model is consistently overfitting; let's try a much smaller/larger network.").
 
 action_gen:
   system: |-
@@ -556,11 +578,11 @@ action_gen:
     The output must be a JSON object with a single key "action".
     Example:
     {
-      "action": "model"
+      "action": "factor"
     }
     Example:
     {
-      "action": "factor"
+      "action": "model"
     }
   user: |-
     **Analyze the following experimental history to determine the next action.**

@@ -120,11 +120,11 @@ class QlibModelRunner(CachedRunner[QlibModelExperiment]):
             if exist_sota_factor_exp:
                 config_name = "conf_sota_factors_model.yaml"
                 env_to_use.update(
-                    {"dataset_cls": "TSDatasetH", "num_features": num_features, "step_len": 90}
+                    {"dataset_cls": "TSDatasetH", "num_features": num_features, "step_len": 20}
                 )
             else:
                 config_name = "conf_baseline_factors_model.yaml"
-                env_to_use.update({"dataset_cls": "TSDatasetH", "step_len": 90})
+                env_to_use.update({"dataset_cls": "TSDatasetH", "step_len": 20})
         elif exp.sub_tasks[0].model_type == "Tabular":
             if exist_sota_factor_exp:
                 config_name = "conf_sota_factors_model.yaml"
@@ -150,9 +150,9 @@ class QlibModelRunner(CachedRunner[QlibModelExperiment]):
                 "nhead": 8,
                 "num_layers": 6,
                 "dropout": 0.5,
-                "num_timesteps": 90,  # Added the missing variable
+                # Removed hardcoded defaults for step_len and num_timesteps
+                # These should be provided by LLM in training_hyperparameters
                 "dataset_cls": "DatasetH",  # Default dataset class
-                "step_len": 90,  # Default step length for time series
             }
 
             template_context = {}
@@ -160,11 +160,20 @@ class QlibModelRunner(CachedRunner[QlibModelExperiment]):
                 # If hyperparameters are provided by the LLM, use them
                 for key, default_val in defaults.items():
                     template_context[key] = training_hyperparameters.get(key, default_val)
-                logger.info(f"Using LLM-provided or default hyperparameters for rendering.")
+                
+                # Ensure step_len and num_timesteps are provided by LLM
+                if "step_len" not in training_hyperparameters:
+                    raise ValueError("step_len must be provided in training_hyperparameters by LLM")
+                if "num_timesteps" not in training_hyperparameters:
+                    raise ValueError("num_timesteps must be provided in training_hyperparameters by LLM")
+                
+                template_context["step_len"] = training_hyperparameters["step_len"]
+                template_context["num_timesteps"] = training_hyperparameters["num_timesteps"]
+                
+                logger.info(f"Using LLM-provided hyperparameters for rendering.")
             else:
-                # Otherwise, use the hardcoded defaults
-                template_context = defaults.copy()
-                logger.info(f"No LLM hyperparameters found. Using hardcoded defaults for rendering.")
+                # Require training_hyperparameters to be provided
+                raise ValueError("training_hyperparameters must be provided by LLM")
 
             # --- Handle dynamic/context-specific variables ---
             
@@ -178,13 +187,10 @@ class QlibModelRunner(CachedRunner[QlibModelExperiment]):
                 template_context["num_features"] = 20
                 logger.info(f"Using default num_features for baseline: 20")
             
-            # Override dataset_cls and step_len based on model type
+            # Override dataset_cls based on model type
             if exp.sub_tasks[0].model_type == "TimeSeries":
                 template_context["dataset_cls"] = "TSDatasetH"
-                template_context["step_len"] = 90
-                # For time series models, ensure num_timesteps is set
-                if "num_timesteps" not in template_context:
-                    template_context["num_timesteps"] = 90
+                # step_len and num_timesteps are already set from training_hyperparameters
             else:  # Tabular
                 template_context["dataset_cls"] = "DatasetH"
                 # For tabular models, set step_len to None so Jinja2 condition works properly

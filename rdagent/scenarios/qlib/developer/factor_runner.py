@@ -191,9 +191,15 @@ class QlibFactorRunner(CachedRunner[QlibFactorExperiment]):
                         logger.info(f"FactorRunner dynamically updated env_to_use with num_timesteps: {sota_training_hyperparameters['num_timesteps']}")
                 sota_model_type = sota_model_exp.sub_tasks[0].model_type
                 if sota_model_type == "TimeSeries":
-                    env_to_use.update(
-                        {"dataset_cls": "TSDatasetH", "num_features": num_features, "step_len": 20}
-                    )
+                    # Get step_len from training hyperparameters
+                    if "step_len" in sota_training_hyperparameters:
+                        step_len = sota_training_hyperparameters["step_len"]
+                        env_to_use.update(
+                            {"dataset_cls": "TSDatasetH", "num_features": num_features, "step_len": step_len}
+                        )
+                        logger.info(f"FactorRunner using step_len from training hyperparameters: {step_len}")
+                    else:
+                        raise ValueError("step_len must be provided in training_hyperparameters for TimeSeries models")
                 elif sota_model_type == "Tabular":
                     env_to_use.update({"dataset_cls": "DatasetH", "num_features": num_features})
 
