@@ -433,19 +433,24 @@ factor_feedback_generation:
 
     Your mission is to conduct a deep-dive analysis of these results, providing insightful, actionable feedback that will guide the next iteration. Your output is the single most important input for the **Synthesis Unit** and the **multi-armed bandit** scheduler. A shallow analysis leads to wasted resources; a deep analysis leads to alpha.
 
+    ------CRITICAL FACTOR SCREENING PRIORITY------
+    **In the factor screening stage, prioritize IC/ICIR and Rank IC above all other metrics. Annualized return and max drawdown are secondary, used mainly for reference. Only when factors are assembled into a portfolio should these portfolio-level metrics be considered primary.**
+
     ------Guiding Principles for High-Quality Feedback------
-    1.  **Think Like a Portfolio Manager, Not a Statistician:** Don't just list metrics. Interpret them. A higher annualized return is good, but at what cost? How did the max drawdown change? How do the risk-adjusted returns (e.g., Information Ratio) compare? Crucially, compare the strategy's performance against the **benchmark return** provided in the training log.
+    1.  **Think Like a Factor Scientist, Not a Portfolio Manager:** In factor screening, focus on the factor's raw predictive power. IC/ICIR are the primary indicators of factor quality. As reference standards, factors typically perform well with IC > 0.024 (daily) / 0.03-0.05 (weekly/monthly) and ICIR > 0.2 (daily) / 0.3 (weekly/monthly). A factor meeting these standards is fundamentally sound, regardless of its single-factor backtest returns. Annualized returns and max drawdown in single-factor tests are heavily influenced by noise, extreme events, and transaction costs - not the factor's true predictive ability.
 
     2.  **Be a Detective, Not a Reporter:** The numbers tell a story. Your job is to uncover it.
         -   **Connect to the Factor's Logic:** Relate the factor's formulation to its performance. Did it perform well in certain market regimes?
-        -   **Analyze the Full Log:** Scrutinize the training log. Does the model show signs of overfitting (e.g., diverging train/validation loss)? How do the detailed IC metrics (IC, ICIR, Rank IC) tell a more complete story? What does the difference between return-with-cost and return-without-cost reveal about the strategy's turnover?
+        -   **Analyze IC Metrics First:** Scrutinize IC, ICIR, and Rank IC as your primary diagnostic tools. These metrics reveal the factor's true predictive power and stability. Compare against reference standards: IC > 0.024 (daily) / 0.03-0.05 (weekly/monthly) and ICIR > 0.2 (daily) / 0.3 (weekly/monthly). Only after assessing IC/ICIR performance should you consider annualized returns and max drawdown.
         -   **Analyze Interaction Effects:** The new factor was added to the existing SOTA library. Did it complement the other factors, or was it redundant?
 
     3.  **Formulate Actionable & Testable Hypotheses:** Your "New Hypothesis" must be a clear research proposal.
         -   **Bad Hypothesis:** "Let's try to improve returns." (Vague)
         -   **Good Hypothesis:** "The current momentum factor struggles in high-volatility regimes. I hypothesize that adding a 60-day low-volatility factor will hedge this risk, improving the Information Ratio and reducing max drawdown without significantly hurting overall performance."
 
-    4.  **Justify Your SOTA Decision:** The "Replace Best Result" is a critical decision. In your "Observations," clearly justify it by explaining the trade-offs you considered.
+    4.  **Factor Quality Assessment:** When evaluating factors, prioritize IC/ICIR performance against reference standards: IC > 0.024 (daily) / 0.03-0.05 (weekly/monthly) and ICIR > 0.2 (daily) / 0.3 (weekly/monthly). Factors significantly below these standards may lack fundamental predictive power and should be carefully evaluated before retention.
+
+    5.  **Justify Your SOTA Decision:** The "Replace Best Result" is a critical decision. In your "Observations," clearly justify it by explaining the trade-offs you considered.
 
     ------Your Mandated Analysis & Reporting Format------
     You will receive a hypothesis, the factor(s) tested, the combined backtest results, and the full training log. Provide your analysis in a single, valid JSON object. All string values should be comprehensive and well-reasoned.
@@ -454,9 +459,9 @@ factor_feedback_generation:
     {
       "Observations": "/* A multi-faceted summary. Start with a high-level conclusion, then delve into specifics. Structure it like this:
       1.  **Executive Summary:** What is the main takeaway from this experiment? Did we succeed?
-      2.  **Performance Deep-Dive:** Analyze the full suite of metrics from the training log (IC, ICIR, Rank IC, returns with/without cost) against the SOTA results and the market benchmark. What are the key trade-offs observed? (Maximum 3 sentences)
-      3.  **Diagnostic Analysis:** Why did we see these results? Comment on model training (e.g., overfitting from the l2 loss curves), the stability of the alpha (ICIR), and the impact of transaction costs. (Maximum 3 sentences)
-      4.  **Strategic Implications:** What does this result mean for our overall research direction? Are we on the right track? (Maximum 3 sentences) */",
+      2.  **IC/ICIR Analysis (Primary):** Analyze IC, ICIR, and Rank IC as the primary indicators of factor quality. Compare against reference standards: IC > 0.024 (daily) / 0.03-0.05 (weekly/monthly) and ICIR > 0.2 (daily) / 0.3 (weekly/monthly). How does it compare to SOTA IC/ICIR? (Maximum 3 sentences)
+      3.  **Return/Drawdown Analysis (Secondary):** Only after IC/ICIR assessment, briefly comment on annualized returns and max drawdown as supplementary information. These are less critical for factor screening. (Maximum 2 sentences)
+      4.  **Strategic Implications:** What does this result mean for our overall research direction? Are we on the right track? (Maximum 2 sentences) */",
       "Feedback for Hypothesis": "/* Directly address the initial hypothesis. Was it supported, refuted, or partially supported by the evidence from the logs? Explain concisely. (Maximum 3 sentences) */",
       "New Hypothesis": "/* Based on your analysis, propose a single, clear, and testable hypothesis for the next research cycle. This should be a direct evolution of your findings. (Maximum 3 sentences) */",
       "Reasoning": "/* Explain the logical link between your 'Observations' and your 'New Hypothesis'. Why do you believe this new direction is the most promising next step? (Maximum 3 sentences) */",
@@ -574,7 +579,7 @@ action_gen:
         - Have recent model changes failed to improve performance, suggesting the input features are the limiting element? (Suggests -> `factor`)
 
     Based on your analysis of these questions, output your final decision.
-    
+    The ratio of factors and models should be balanced, so that one side does not significantly outweigh the other.
     The output must be a JSON object with a single key "action".
     Example:
     {

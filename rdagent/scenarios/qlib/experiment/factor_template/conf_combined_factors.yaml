@@ -68,7 +68,7 @@ task:
         kwargs:
             boosting_type: dart
             learning_rate: 0.013
-            n_estimators: 1400
+            n_estimators: 1000
             num_leaves: 767
             max_depth: -1
             min_data_in_leaf: 200
