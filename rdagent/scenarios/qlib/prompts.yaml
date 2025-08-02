@@ -104,7 +104,7 @@ model_hypothesis_specification: |-
 
   **2. VRAM Estimation (Mandatory):**
     *   Your VRAM calculation must be tailored to the specific architecture you propose. The following methods are **illustrative examples** to guide your reasoning, not a restrictive list. **You are free to propose any model from your architectural toolbox.**
-    *   Assume BF16 precision and AdamW optimizer unless specified otherwise.
+    *   Assume FP32 precision and AdamW optimizer unless specified otherwise.
 
     **Example 1: Benchmark-based Scaling (Good for Transformers, e.g., `pytorch_transformer_ts`)**
       *   Uses a similar completed experiment from `historical_archive` as a reference.
@@ -150,7 +150,7 @@ model_hypothesis_specification: |-
 
   * **D. The Research Frontier (Graph Neural Networks):**
       * **Models:** `pytorch_gats_ts`.
-      * **Warning:** This is a high-risk, high-reward research tool. **DO NOT** propose this unless you are explicitly pivoting to model **inter-stock relationships** (e.g., sector-wide momentum). Your hypothesis MUST include a conceptual justification for how the graph could be dynamically created, as no pre-defined graph exists. This represents a major strategic shift.
+      * **Warning:** This is a high-risk, high-reward research tool. Propose this when you are explicitly pivoting to model **inter-stock relationships** (e.g., sector-wide momentum). Your hypothesis MUST include a conceptual justification for how the graph could be dynamically created, as no pre-defined graph exists. This represents a major strategic shift.
 
 
 
